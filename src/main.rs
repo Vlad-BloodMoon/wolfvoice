@@ -182,7 +182,12 @@ impl App {
             },
         };
 
-        let id = format!("wv-{}", uuid::Uuid::new_v4());
+        // A bare UUID: the viewer keeps this as an LLUUID (llvoicewebrtc.h:697 mViewerSession,
+        // set at llvoicewebrtc.cpp:2876), so "wv-<uuid>" became the null UUID and every later
+        // VoiceSignalingRequest (the viewer's trickle ICE candidates) and logout carried
+        // 00000000-...; the region could not find the session, the candidates never arrived,
+        // and sessions failed "having received no remote ICE candidate at all".
+        let id = uuid::Uuid::new_v4().to_string();
         let sess = Arc::new(Session::new(
             id.clone(),
             params.user_id.clone(),
