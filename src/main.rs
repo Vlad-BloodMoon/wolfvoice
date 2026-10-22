@@ -345,7 +345,9 @@ async fn mixer_loop(app: Arc<App>) {
                             return;
                         }
                         if let Some(roster) = out.roster {
-                            ep.send_roster(&roster).await;
+                            if ep.send_roster(&roster.json).await {
+                                out.session.confirm_roster(&roster);
+                            }
                         }
                         if let Err(e) = ep.send_mix(&out.stereo).await {
                             log::debug!("send_mix {}: {e}", out.session.id);

@@ -9,7 +9,7 @@
 //! participant.
 
 use parking_lot::{Mutex, RwLock};
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::Arc;
 
@@ -82,8 +82,8 @@ pub struct Session {
     pub primary: AtomicBool,
     pub closed: AtomicBool,
 
-    /// Agents we have already announced to this listener, so a join is sent once.
-    announced: Mutex<HashSet<String>>,
+    /// Successfully sent joins, including the primary status advertised then.
+    announced: Mutex<HashMap<String, bool>>,
 }
 
 impl Session {
@@ -101,7 +101,7 @@ impl Session {
             joined: AtomicBool::new(false),
             primary: AtomicBool::new(false),
             closed: AtomicBool::new(false),
-            announced: Mutex::new(HashSet::new()),
+            announced: Mutex::new(HashMap::new()),
         }
     }
 
@@ -122,8 +122,8 @@ impl Session {
     /// Apply a control message that arrived on the data channel.
     pub fn apply_data(&self, m: &proto::ViewerDataMessage) {
         if let Some(primary) = m.join {
-            self.joined.store(true, Ordering::Relaxed);
             self.primary.store(primary, Ordering::Relaxed);
+            self.joined.store(true, Ordering::Release);
         }
 
         // Reject anything not finite before it reaches the mixer. JSON can carry
@@ -199,9 +199,10 @@ impl Session {
         *self.gains.read().get(speaker).unwrap_or(&1.0)
     }
 
-    /// True the first time this listener is told about `agent`.
-    fn mark_announced(&self, agent: &str) -> bool {
-        self.announced.lock().insert(agent.to_owned())
+    /// Commit only joins accepted by the transport. Building or dropping an
+    /// update must leave them pending so the next mixer tick can retry.
+    pub fn confirm_roster(&self, update: &RosterUpdate) {
+        self.announced.lock().extend(update.announcements.iter().cloned());
     }
 
     fn forget_announced(&self, agent: &str) {
@@ -268,7 +269,13 @@ impl Registry {
 pub struct ListenerOutput {
     pub session: Arc<Session>,
     pub stereo: Vec<f32>,
-    pub roster: Option<String>,
+    pub roster: Option<RosterUpdate>,
+}
+
+#[derive(Clone)]
+pub struct RosterUpdate {
+    pub json: String,
+    announcements: Vec<(String, bool)>,
 }
 
 /// Compute one 20 ms tick for a whole room.
@@ -345,14 +352,28 @@ pub fn mix_room(members: &[Arc<Session>]) -> Vec<ListenerOutput> {
 }
 
 /// Build the roster update for one listener, or None when nothing changed.
-fn build_roster(listener: &Arc<Session>, frames: &[(Arc<Session>, Option<Vec<f32>>)]) -> Option<String> {
+fn build_roster(listener: &Arc<Session>, frames: &[(Arc<Session>, Option<Vec<f32>>)]) -> Option<RosterUpdate> {
+    // A viewer sends its join after its data observer is ready. Merely having
+    // accepted the SCTP channel is too early to consume its initial roster.
+    if !listener.joined.load(Ordering::Acquire) {
+        return None;
+    }
     let mut entries: Vec<(String, RosterEntry)> = Vec::new();
+    let mut announcements = Vec::new();
+    let announced = listener.announced.lock();
 
     for (speaker, _) in frames {
+        if !speaker.joined.load(Ordering::Acquire) {
+            continue;
+        }
         // Report every participant including the listener: the viewer keys its own
         // participant list off these ids and shows its own dot from them too.
         let level = speaker.level.load(Ordering::Relaxed);
-        let joined = listener.mark_announced(&speaker.agent_id);
+        let primary = speaker.primary.load(Ordering::Relaxed);
+        let joined = announced.get(&speaker.agent_id) != Some(&primary);
+        if joined {
+            announcements.push((speaker.agent_id.clone(), primary));
+        }
         let speaking =
             (level as f32 / proto::LEVEL_SCALE_TO_WIRE) > proto::SPEAKING_AUDIO_LEVEL;
 
@@ -367,7 +388,7 @@ fn build_roster(listener: &Arc<Session>, frames: &[(Arc<Session>, Option<Vec<f32
             speaker.agent_id.clone(),
             RosterEntry {
                 joined,
-                primary: speaker.primary.load(Ordering::Relaxed),
+                primary,
                 power: level,
                 speaking,
                 moderator_muted: false,
@@ -378,7 +399,7 @@ fn build_roster(listener: &Arc<Session>, frames: &[(Arc<Session>, Option<Vec<f32
     if entries.is_empty() {
         return None;
     }
-    Some(proto::roster_json(&entries))
+    Some(RosterUpdate { json: proto::roster_json(&entries), announcements })
 }
 
 #[cfg(test)]
@@ -398,6 +419,7 @@ mod tests {
             st.listener_pos = pos;
             st.known = true;
         }
+        s.apply_data(&proto::ViewerDataMessage { join: Some(true), ..Default::default() });
         s
     }
 
@@ -514,14 +536,16 @@ mod tests {
         let b = session("b", "agent-b", [1.0, 0.0, 0.0]);
         loud(&b);
         let out = mix_room(&[a.clone(), b.clone()]);
-        let r = out.iter().find(|o| o.session.id == "a").unwrap().roster.clone().unwrap();
+        let r = out.iter().find(|o| o.session.id == "a").unwrap().roster.clone().unwrap().json;
         assert!(r.contains("agent-b"), "first tick announces the join: {r}");
         assert!(r.contains(r#""j""#));
+
+        confirm_outputs(&out);
 
         // Second tick, still speaking: no repeated join for the same agent.
         loud(&b);
         let out = mix_room(&[a.clone(), b.clone()]);
-        let r = out.iter().find(|o| o.session.id == "a").unwrap().roster.clone().unwrap();
+        let r = out.iter().find(|o| o.session.id == "a").unwrap().roster.clone().unwrap().json;
         assert!(!r.contains(r#""j""#), "join must not repeat: {r}");
     }
 
@@ -530,13 +554,106 @@ mod tests {
         let a = session("a", "agent-a", [0.0, 0.0, 0.0]);
         let b = session("b", "agent-b", [1.0, 0.0, 0.0]);
         // First tick announces joins.
-        let _ = mix_room(&[a.clone(), b.clone()]);
+        let initial = mix_room(&[a.clone(), b.clone()]);
+        confirm_outputs(&initial);
         // Second tick, nobody speaking, nothing new to say.
         let out = mix_room(&[a.clone(), b.clone()]);
         assert!(
             out.iter().all(|o| o.roster.is_none()),
             "an idle room must not push a roster every tick"
         );
+    }
+
+    fn confirm_outputs(outputs: &[ListenerOutput]) {
+        for out in outputs {
+            if let Some(update) = &out.roster {
+                out.session.confirm_roster(update);
+            }
+        }
+    }
+
+    #[test]
+    fn dropped_roster_is_retried_until_confirmed() {
+        let a = session("a", "agent-a", [0.0; 3]);
+        let b = session("b", "agent-b", [1.0; 3]);
+        let members = [a, b];
+        // Models an unavailable channel or a failed send: no confirmation.
+        let first = mix_room(&members);
+        let retry = mix_room(&members);
+        assert_eq!(first[0].roster.as_ref().unwrap().json,
+                   retry[0].roster.as_ref().unwrap().json);
+        confirm_outputs(&retry);
+        assert!(mix_room(&members).iter().all(|o| o.roster.is_none()));
+    }
+
+    #[test]
+    fn roster_waits_for_listener_and_speaker_join() {
+        let a = session("a", "agent-a", [0.0; 3]);
+        let b = session("b", "agent-b", [1.0; 3]);
+        a.joined.store(false, Ordering::Relaxed);
+        b.joined.store(false, Ordering::Relaxed);
+        let members = [a.clone(), b.clone()];
+        assert!(mix_room(&members).iter().all(|o| o.roster.is_none()));
+        a.apply_data(&proto::ViewerDataMessage { join: Some(true), ..Default::default() });
+        let out = mix_room(&members);
+        let json: serde_json::Value = serde_json::from_str(&out[0].roster.as_ref().unwrap().json).unwrap();
+        assert!(json.get("agent-b").is_none());
+        confirm_outputs(&out);
+        b.apply_data(&proto::ViewerDataMessage { join: Some(true), ..Default::default() });
+        let out = mix_room(&members);
+        let json: serde_json::Value = serde_json::from_str(&out[0].roster.as_ref().unwrap().json).unwrap();
+        assert_eq!(json["agent-b"]["j"]["p"], true);
+    }
+
+    #[test]
+    fn primary_change_reannounces_a_silent_participant() {
+        let a = session("a", "agent-a", [0.0; 3]);
+        let b = session("b", "agent-b", [1.0; 3]);
+        b.apply_data(&proto::ViewerDataMessage { join: Some(false), ..Default::default() });
+        let members = [a, b.clone()];
+        confirm_outputs(&mix_room(&members));
+        assert!(mix_room(&members)[0].roster.is_none());
+        b.apply_data(&proto::ViewerDataMessage { join: Some(true), ..Default::default() });
+        let out = mix_room(&members);
+        let json: serde_json::Value = serde_json::from_str(&out[0].roster.as_ref().unwrap().json).unwrap();
+        assert_eq!(json["agent-b"]["j"]["p"], true);
+        confirm_outputs(&out);
+        assert!(mix_room(&members)[0].roster.is_none());
+    }
+
+    #[test]
+    fn voice_reset_reannounces_peers_in_both_directions() {
+        let reg = Registry::default();
+        let a = session("old-session", "agent-a", [0.0; 3]);
+        let b = session("b", "agent-b", [1.0; 3]);
+        let room = a.room.clone();
+        reg.insert(a);
+        reg.insert(b);
+        confirm_outputs(&mix_room(&reg.members(&room)));
+        assert!(mix_room(&reg.members(&room)).iter().all(|o| o.roster.is_none()));
+
+        // Reset Voice removes the old transport, then provisions a fresh UUID
+        // for the same avatar. Its peers must not retain a consumed join.
+        reg.remove("old-session").unwrap();
+        let replacement = session("new-session", "agent-a", [0.0; 3]);
+        replacement.joined.store(false, Ordering::Relaxed);
+        reg.insert(replacement.clone());
+        assert!(mix_room(&reg.members(&room)).iter().all(|o| o.roster.is_none()));
+        replacement.apply_data(&proto::ViewerDataMessage {
+            join: Some(true),
+            ..Default::default()
+        });
+        let out = mix_room(&reg.members(&room));
+        for listener in &out {
+            let peer = if listener.session.agent_id == "agent-a" { "agent-b" } else { "agent-a" };
+            let json: serde_json::Value = serde_json::from_str(
+                &listener.roster.as_ref().unwrap().json,
+            ).unwrap();
+            assert_eq!(json[peer]["j"]["p"], true);
+        }
+        confirm_outputs(&out);
+        assert!(mix_room(&reg.members(&room)).iter().all(|o| o.roster.is_none()));
+        assert_eq!(reg.session_count(), 2);
     }
 
     #[test]
