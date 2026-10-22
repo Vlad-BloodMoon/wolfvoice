@@ -2,11 +2,11 @@
 #
 # wolfvoice installer.
 #
-#   curl -fsSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/wolfvoice/main/setup.sh | sudo bash
+#   curl -fsSL https://raw.githubusercontent.com/Vlad-BloodMoon/wolfvoice/main/setup.sh | sudo bash
 #
 # or, to see what it will do first (recommended):
 #
-#   curl -fsSLO https://raw.githubusercontent.com/wolfsoftwaresystemsltd/wolfvoice/main/setup.sh
+#   curl -fsSLO https://raw.githubusercontent.com/Vlad-BloodMoon/wolfvoice/main/setup.sh
 #   less setup.sh && sudo bash setup.sh
 #
 # What it does:
@@ -25,7 +25,9 @@
 
 set -euo pipefail
 
-REPO="wolfsoftwaresystemsltd/wolfvoice"
+REPO="Vlad-BloodMoon/wolfvoice"
+# Pin the tested community prerelease: /latest excludes GitHub prereleases.
+RELEASE_TAG="v0.1.1-bloodmoon.1"
 PREFIX="${PREFIX:-/usr/local/bin}"
 CONFDIR="/etc/wolfvoice"
 TLSDIR="$CONFDIR/tls"
@@ -98,7 +100,7 @@ command -v curl >/dev/null || die "curl is required"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-base="https://github.com/$REPO/releases/latest/download"
+base="https://github.com/$REPO/releases/download/$RELEASE_TAG"
 asset=""
 for candidate in $assets; do
     if curl -fsSL "$base/$candidate" -o "$tmp/wolfvoice" 2>/dev/null \
@@ -108,7 +110,7 @@ for candidate in $assets; do
     fi
     info "not in this release: $candidate"
 done
-[ -n "$asset" ] || die "no usable binary for $os/$arch in the latest release"
+[ -n "$asset" ] || die "no usable binary for $os/$arch in release $RELEASE_TAG"
 info "using $asset"
 
 step "Verifying checksum"
