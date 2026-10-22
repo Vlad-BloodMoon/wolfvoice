@@ -1,0 +1,82 @@
+name: Publish BloodMoon participant fix
+
+on:
+  push:
+    branches: ['bloodmoon/publish-v0.1.1-bloodmoon.1']
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: publish-v0.1.1-bloodmoon.1
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: Vlad-BloodMoon/wolfvoice
+    steps:
+      - name: Verify tested build and download artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api repos/$GH_REPO/actions/runs/39745678625 > run.json
+          python3 - <<'PY'
+          import json
+          run = json.load(open("run.json"))
+          assert run["head_sha"] == "a7879aa3179499663b0e64b399e754237aff5c19"
+          assert run["status"] == "completed" and run["conclusion"] == "success"
+          assert run["path"] == ".github/workflows/release.yml"
+          PY
+          gh run download 39745678625 --dir artifacts
+      - name: Verify all binary checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          for asset in wolfvoice-x86_64-linux-gnu wolfvoice-x86_64-linux-musl wolfvoice-aarch64-linux-gnu wolfvoice-aarch64-linux-musl; do
+            test -f "artifacts/$asset/$asset"
+            test -f "artifacts/$asset/$asset.sha256"
+            (cd "artifacts/$asset" && sha256sum -c "$asset.sha256")
+          done
+      - name: Publish community prerelease
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > notes.md <<'NOTES'
+          ## WolfVoice — BloodMoon participant fix
+          
+          Community release of the BloodMoon fork, based on upstream WolfVoice 0.1.1 plus the participant-announcement fix in PR #1.
+          
+          ### Confirmed on BloodMoon with four participants
+          - Each participant can see the other avatars' white Voice dots.
+          - Individual participant volume controls are available and work.
+          - Local voice audio works.
+          
+          ### Fix
+          Keep participant announcements pending until the data transport accepts them, wait for viewer join readiness, and reannounce changes to primary status. The existing bare-UUID session fix is preserved. Firestorm and OpenSimulator DLLs were not modified.
+          
+          ### Validation
+          35 unit tests pass, including a session-replacement regression test modelling Reset Voice. Clippy, example builds and Shellcheck pass. This automated reset test is not a complete Firestorm end-to-end test.
+          
+          ### Known issue: private IM voice calls
+          Private calls remain under investigation: the recipient may receive no invitation, and a failed call can require Reset Voice to restore local voice. This release does not claim to fix IM/private calls or validate group calls.
+          
+          ### Binaries
+          The four Linux binaries and their SHA256 files come from the successful GitHub Actions build of commit a7879aa3179499663b0e64b399e754237aff5c19 (run 39745678625), the source revision tested on BloodMoon.
+          For the Ubuntu x86_64 deployment, use wolfvoice-x86_64-linux-musl.
+          
+          Back up the currently installed binary before replacing it, so it can be restored if needed.
+          
+          Upstream project credit remains with Wolf Software Systems Ltd and the original contributors. This is a BloodMoon fork release, not an upstream official release.
+          NOTES
+          files=()
+          for asset in wolfvoice-x86_64-linux-gnu wolfvoice-x86_64-linux-musl wolfvoice-aarch64-linux-gnu wolfvoice-aarch64-linux-musl; do
+            files+=("artifacts/$asset/$asset" "artifacts/$asset/$asset.sha256")
+          done
+          gh release create v0.1.1-bloodmoon.1 "${files[@]}" \
+            --target a7879aa3179499663b0e64b399e754237aff5c19 \
+            --title "WolfVoice v0.1.1-bloodmoon.1 — participant dots and volume" \
+            --notes-file notes.md --prerelease
