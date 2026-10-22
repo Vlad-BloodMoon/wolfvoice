@@ -131,13 +131,16 @@ impl Endpoint {
     }
 
     /// Push a roster update down the data channel, if it is open yet.
-    pub async fn send_roster(&self, json: &str) {
+    pub async fn send_roster(&self, json: &str) -> bool {
         let dc = self.dc.lock().clone();
         if let Some(dc) = dc {
             if let Err(e) = dc.send_text(json).await {
                 log::debug!("roster send failed for {}: {e}", self.session.id);
+                return false;
             }
+            return true;
         }
+        false
     }
 
     pub fn data_channel_open(&self) -> bool {
