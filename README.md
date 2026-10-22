@@ -1,5 +1,52 @@
 # wolfvoice
 
+## BloodMoon fork — participant dots and individual volume
+
+This community fork builds on upstream WolfVoice by Wolf Software Systems Ltd.
+The BloodMoon fix addresses lost participant announcements in Firestorm; it does
+not modify Firestorm or the official OpenSimulator WebRTC DLLs.
+
+**[Download v0.1.1-bloodmoon.1](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.1.1-bloodmoon.1)**
+— Linux x86_64 and aarch64 binaries, with SHA256 checksums.
+This is a BloodMoon community prerelease, not an official upstream release.
+For Linux x86_64, `wolfvoice-x86_64-linux-musl` is the static build used on BloodMoon.
+The installer in this fork selects this exact BloodMoon release, including its
+SHA256 verification. Back up your installed binary before updating.
+
+### Confirmed on BloodMoon with four participants — 22 October 2026
+
+| Feature | Result |
+|---|---|
+| Local voice audio | Working |
+| Other avatars' white Voice dots | Visible to the participants |
+| Individual participant volume | Controls available and volume adjustment working |
+| Private IM voice calls | Not working in the reported test; investigation ongoing |
+
+Previously, each participant could see their own dot and hear others, while the
+other avatars' dots and individual volume controls were unavailable. The fix
+waits for viewer join readiness, retries announcements not accepted by the
+transport, and reannounces participants when their primary status changes.
+
+**Reset Voice:** the upstream bare-UUID session fix is retained. The automated
+regression suite includes replacement of a session for the same avatar and checks
+that peers are reannounced in both directions. This test is not a full Firestorm
+end-to-end validation of all reset scenarios.
+
+**IM/private calls remain under investigation.** In the reported test, the
+recipient did not receive an invitation; after a failed call, Reset Voice was
+needed to recover local voice. This release does not fix that issue, and group
+calls have not been validated by BloodMoon.
+
+Validation: **35 unit tests passed**, together with Clippy, example builds and
+Shellcheck. The published binaries were built from
+[`a7879aa`](https://github.com/Vlad-BloodMoon/wolfvoice/commit/a7879aa3179499663b0e64b399e754237aff5c19);
+the fix was integrated through [PR #1](https://github.com/Vlad-BloodMoon/wolfvoice/pull/1).
+
+**En français :** correctif BloodMoon validé avec **quatre participants** :
+points Voice des autres avatars visibles et volume individuel fonctionnel.
+Les appels vocaux privés en IM restent en cours d'investigation ; un échec peut
+nécessiter un Reset Voice pour retrouver la Voice locale.
+
 Spatial WebRTC voice for [OpenSimulator](http://opensimulator.org) — one service that
 Firestorm and browser-based viewers both reach through the region's own capabilities,
 so users of different viewers hear each other, positionally.
@@ -79,8 +126,21 @@ positional audio.
 
 ### 1. Install the voice server
 
+The following installer downloads **v0.1.1-bloodmoon.1 from this fork**, with the
+participant-announcement fix. It uses an explicit release tag because GitHub's
+`latest` download endpoint excludes prereleases. It does not install upstream binaries.
+
+**Existing installation:** do not rerun the full installer to update your server;
+it configures TLS and systemd. Back up your current binary and its SHA256, download
+the matching binary and `.sha256` from the
+[BloodMoon release](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.1.1-bloodmoon.1),
+verify the checksum, replace only the binary and restart your existing service.
+Keep your configuration and backup for rollback.
+
+**New installation** (Linux with systemd; review the script's TLS requirements):
+
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/wolfsoftwaresystemsltd/wolfvoice/main/setup.sh
+curl -fsSLO https://raw.githubusercontent.com/Vlad-BloodMoon/wolfvoice/main/setup.sh
 less setup.sh          # it runs as root; read it first
 sudo bash setup.sh
 ```
@@ -260,7 +320,7 @@ Needs a Rust toolchain and `cmake` (the `opus` crate compiles libopus from sourc
 
 ```bash
 cargo build --release
-cargo test              # 31 tests, no network required
+cargo test              # 35 tests, no network required
 ```
 
 Release binaries for Linux, macOS and Windows are built by GitHub Actions — see
@@ -292,8 +352,10 @@ test.
   silently.
 - **Single instance.** If wolfvoice is down, voice is down everywhere it is
   configured. `Restart=always` covers a crash, not a host failure.
-- **Group and IM voice** (`channel_type: multiagent`) is implemented and rooms are
-  keyed correctly, but has had far less exercise than spatial voice.
+- **Group and IM voice** (`channel_type: multiagent`) exists in the backend, but
+  private-call invitations failed in BloodMoon's field test and a failed call can
+  require Reset Voice to recover local voice. Investigation is ongoing; do not
+  treat private or group calls as validated in this release.
 
 ## Credits
 
