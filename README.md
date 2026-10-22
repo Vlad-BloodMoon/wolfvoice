@@ -10,8 +10,8 @@ not modify Firestorm or the official OpenSimulator WebRTC DLLs.
 — Linux x86_64 and aarch64 binaries, with SHA256 checksums.
 This is a BloodMoon community prerelease, not an official upstream release.
 For Linux x86_64, `wolfvoice-x86_64-linux-musl` is the static build used on BloodMoon.
-Use these release assets for this fork; the existing upstream installer has not
-been changed to select BloodMoon builds. Back up your installed binary before updating.
+The installer in this fork selects this exact BloodMoon release, including its
+SHA256 verification. Back up your installed binary before updating.
 
 ### Confirmed on BloodMoon with four participants — 22 October 2026
 
@@ -126,8 +126,21 @@ positional audio.
 
 ### 1. Install the voice server
 
+The following installer downloads **v0.1.1-bloodmoon.1 from this fork**, with the
+participant-announcement fix. It uses an explicit release tag because GitHub's
+`latest` download endpoint excludes prereleases. It does not install upstream binaries.
+
+**Existing installation:** do not rerun the full installer to update your server;
+it configures TLS and systemd. Back up your current binary and its SHA256, download
+the matching binary and `.sha256` from the
+[BloodMoon release](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.1.1-bloodmoon.1),
+verify the checksum, replace only the binary and restart your existing service.
+Keep your configuration and backup for rollback.
+
+**New installation** (Linux with systemd; review the script's TLS requirements):
+
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/wolfsoftwaresystemsltd/wolfvoice/main/setup.sh
+curl -fsSLO https://raw.githubusercontent.com/Vlad-BloodMoon/wolfvoice/main/setup.sh
 less setup.sh          # it runs as root; read it first
 sudo bash setup.sh
 ```
@@ -307,7 +320,7 @@ Needs a Rust toolchain and `cmake` (the `opus` crate compiles libopus from sourc
 
 ```bash
 cargo build --release
-cargo test              # 31 tests, no network required
+cargo test              # 35 tests, no network required
 ```
 
 Release binaries for Linux, macOS and Windows are built by GitHub Actions — see
