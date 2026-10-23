@@ -1,5 +1,7 @@
 # WolfVoice v0.2.0-bloodmoon.1
 
+For exact installation, key creation, transfer and restart commands, see [INSTALLATION.md](INSTALLATION.md).
+
 Based on intelligentwolf/wolfvoice d9ec3e9ececc6c1f3df8e264dc28032903e436ee.
 Runtime sources are unchanged from that upstream version; this release integrates and documents it in this fork.
 

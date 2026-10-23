@@ -23,7 +23,7 @@ Why two: anything that calls the JSON-RPC needs the relay key, so it tends to en
 more machines than the regions. The credential key stays with the regions and the voice
 server only, so holding the relay key is not enough to mint a ticket into someone's call.
 
-`setup.sh` creates both on a fresh install of the voice server. To make them by hand, generate each with
+This fork's `setup.sh` does not create keys. Follow [installation and key setup](INSTALLATION.md), which covers both fresh two-key deployments and credential-only rolling upgrades. Generate each new key with
 `openssl rand -hex 32`. On the voice server: owner `root`, group
 `wolfvoice`, mode `640`. On a region host: readable by the user OpenSim runs as only.
 
@@ -32,9 +32,10 @@ be installed or replaced without restarting regions. wolfvoice reads its keys at
 
 ## Setting up from scratch
 
-1. Create both keys on the voice server and restart wolfvoice.
-2. Copy both to every region host.
-3. Start or restart the regions.
+1. Install the matching modules and prepare the region configuration.
+2. Create the server keys using the non-overwriting commands in [INSTALLATION.md](INSTALLATION.md).
+3. Transfer the same key contents privately to every authorized region host.
+4. Restart wolfvoice and then the regions. For a rolling upgrade with old modules, use credential-only mode until every region can send the relay key.
 
 ## Adding the credential key to a grid already running one key
 

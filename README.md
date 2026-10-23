@@ -56,9 +56,9 @@ plugs into the second, so you point the addon at wolfvoice instead of at Janus.
   rewrite plaintext signalling in flight could become the media endpoint.
 - **UDP 40000–40999** open to the world. This range is also the ceiling on concurrent
   sessions — one socket per peer connection.
-- **TCP 9443** reachable *from your region hosts only*. From 0.2.0 every region
-  request must also carry the shared relay key, and room tickets are signed with a
-  second key - see [docs/SECURITY.md](docs/SECURITY.md).
+- **TCP 9443** reachable *from your region hosts only*. When a relay key is configured, every region request must carry it. Signed room
+  tickets use the credential key. Credential-only mode retains the IP allowlist
+  during rolling upgrades - see [installation](docs/INSTALLATION.md).
 - Modest CPU: **~17 ms per listener per second**, spread across all cores. See [Capacity](#capacity).
 
 **For viewers**
@@ -100,7 +100,7 @@ Download `wolfvoice-x86_64-linux-musl` and its `.sha256` file from [this fork's 
 Verify the checksum, back up the current binary and replace it during a planned voice interruption. Keep the existing systemd unit, certificates, account, IP restrictions and configuration. No installer is needed for an existing installation.
 
 The retained `setup.sh` now points to this fork's v0.2.0-bloodmoon.1 binary.
-It is a fresh-install helper, not the rolling-upgrade procedure. Signing keys and matching region modules must be configured separately; see [deployment notes](docs/INTEGRATION.md).
+It is a fresh-install helper, not the rolling-upgrade procedure. It does not create keys. For a new server, follow [installation and keys](docs/INSTALLATION.md); existing deployments should follow [deployment notes](docs/INTEGRATION.md).
 
 ### 2. Build the region module into OpenSim
 
@@ -176,27 +176,24 @@ listed above into the distribution's `bin/`, replacing any that are there.
 The modules are loaded when OpenSim starts, so restart the region after installing them.
 Nothing is needed on the Robust (grid) server: regions talk to wolfvoice directly.
 
-### 3. Create the keys
+### 3. Create and distribute the keys
 
-On the voice server (`setup.sh` does this on a fresh install; when it upgrades an
-existing one it leaves this to you, so regions without keys keep working until you are ready):
+**This fork's installer does not create signing keys automatically.**
+Follow the [complete installation and key guide](docs/INSTALLATION.md) for the
+commands, file ownership, secure transfer and restart sequence. Existing keys
+are preserved by those commands.
 
-```bash
-sudo sh -c 'umask 027; openssl rand -hex 32 > /etc/wolfvoice/rpc_key; openssl rand -hex 32 > /etc/wolfvoice/cred_key'
-sudo chgrp wolfvoice /etc/wolfvoice/rpc_key /etc/wolfvoice/cred_key
-sudo systemctl restart wolfvoice
-```
+Choose the mode first:
+- **Fresh deployment, all modules updated:** create relay and credential keys.
+- **Rolling upgrade with old modules:** create only the credential key and retain
+  the IP allowlist. Enabling a relay key immediately rejects old modules that do
+  not send it.
 
-Copy both files to every region host, readable only by the user OpenSim runs as:
-
-```bash
-sudo install -d -m 0750 -o opensim -g opensim /etc/opensim     # your OpenSim user
-sudo install -m 0400 -o opensim -g opensim rpc_key  /etc/opensim/voice_rpc_key
-sudo install -m 0400 -o opensim -g opensim cred_key /etc/opensim/voice_cred_key
-```
-
-Regions re-read these files when they change (within a minute); wolfvoice reads its
-keys when it starts. What each key does is in [docs/SECURITY.md](docs/SECURITY.md).
+Server credential file: `/etc/wolfvoice/cred_key`.
+Copy the SAME secret to each authorized region host; do not generate different
+keys for different simulators. Region setting: `CredKeyFile`.
+The optional relay key is `/etc/wolfvoice/rpc_key` on the server and
+`RpcKeyFile` on regions. Never include these secrets in public downloads.
 
 ### 4. Configure each region
 
@@ -213,7 +210,8 @@ untouched.
     ; The host name on wolfvoice's certificate - not an IP address. The certificate is
     ; always verified (chain and name), whatever NoVerifyCertChain says.
     WebRtcVoiceServerURI = https://voice.example.org:9443
-    RpcKeyFile = /etc/opensim/voice_rpc_key
+    ; Enable only when the server requires relay authentication:
+    ; RpcKeyFile = /etc/opensim/voice_rpc_key
     CredKeyFile = /etc/opensim/voice_cred_key
     MessageDetails = false
 
@@ -221,8 +219,8 @@ untouched.
     enabled = false
 ```
 
-`RpcKeyFile` and `CredKeyFile` above are the defaults, so they can be left out if you
-use those paths. Other settings, all optional: `PositionFeed` (default `true`),
+`RpcKeyFile` defaults to `/etc/opensim/voice_rpc_key`; if that file exists it is read
+even with the line commented out. `CredKeyFile` defaults to `/etc/opensim/voice_cred_key`. Other settings, all optional: `PositionFeed` (default `true`),
 `AcceptLegacyCallCredentials` (default `true`, see [docs/SECURITY.md](docs/SECURITY.md)),
 `StunServers` (STUN servers given to the viewer; default Google's public ones).
 In a simulator that runs several regions, `[WebRtcVoice]` applies to all of them.
@@ -240,8 +238,8 @@ Restart the region. When it works, the region log shows:
 
 The `ConferenceApiUrl` line is normal: ad-hoc conferences and Wolf Chat rooms are
 optional Wolf Territories features that need a service of their own. If you also see
-`no voice relay key - private voice calls are off`, the region cannot read
-`RpcKeyFile`.
+a warning that private calls are off, check that the region can read the configured
+credential key (or relay key as fallback).
 
 ### 5. Allow voice on the estate and the parcel
 
@@ -273,7 +271,7 @@ Then talk in-world: wolfvoice logs each session it opens (`journalctl -u wolfvoi
 | Nothing in either log when someone opens voice | Voice is off on the estate or parcel (step 5), or the viewer is older than Firestorm 7.1.10. |
 | Region log: `[WOLFVOICE HTTP] refused the voice server's TLS certificate` | `WebRtcVoiceServerURI` uses an IP or a name not on the certificate, or the certificate is self-signed or expired. Use the certificate's host name. |
 | wolfvoice log: `refused: wrong or missing relay key` | The region's `RpcKeyFile` differs from wolfvoice's `rpc_key`, is not readable by OpenSim, or the region runs a module without keys (built-in master module, older addon). |
-| Region log: `no voice relay key - private voice calls are off` | The region cannot read `RpcKeyFile`. Spatial voice works only if wolfvoice has no key either. |
+| Private calls disabled | The region cannot read a credential key or fallback relay key. Check CredKeyFile and permissions. Local voice does not require a credential key. |
 | Text IMs time out ("session initialization is timed out") | The region runs an addon without the `ChatSessionRequest` fix. Install the branch above (the fix is also in upstream OpenSimulator as [opensim/opensim#69](https://github.com/opensim/opensim/pull/69)). |
 | Build: duplicate project names | Two copies of the module: one in `OpenSim/Addons/` and one in `addon-modules/`. Use route B. |
 | `./runprebuild.sh: Permission denied` or `$'\r': command not found` | The 0.9.3.0 source archive; run the prebuild command directly (route A, step 2). |

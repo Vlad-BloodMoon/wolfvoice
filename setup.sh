@@ -224,58 +224,34 @@ if [ "$(systemctl is-active wolfvoice)" != "active" ]; then
 fi
 info "wolfvoice is running"
 
-# ── what is left for the operator ─────────────────────────────────────────────
+# Operator steps: keys are manual; no existing key is overwritten by this script.
 cat <<EOF
 
-────────────────────────────────────────────────────────────────────────────
- wolfvoice is installed and running. TWO things are still up to you.
-────────────────────────────────────────────────────────────────────────────
+wolfvoice is installed. Signing keys have NOT been created by this installer.
 
-1) FIREWALL. Open these, and no more:
+1) FIREWALL:
+   Restrict TCP ${RPC_PORT} to your region hosts' public egress IPs.
+   Allow UDP ${MEDIA_LO}-${MEDIA_HI} for viewers.
+   This script does not change your firewall.
 
-     ${RPC_PORT}/tcp              from YOUR REGION HOSTS ONLY
-     ${MEDIA_LO}-${MEDIA_HI}/udp      from anywhere (viewers dial in)
+2) KEYS AND REGION MODULES:
+   Follow https://github.com/$REPO/blob/main/docs/INSTALLATION.md
+   Fresh deployment with all modules updated: create relay and credential keys.
+   Rolling upgrade with old modules: credential key only; keep the IP allowlist.
+   Never overwrite an existing key or include a key in a public download.
 
-   The ${RPC_PORT}/tcp endpoint has NO AUTHENTICATION OF ITS OWN. OpenSim posts a
-   bare JSON-RPC body with no credential, so that source restriction plus TLS is
-   the entire security boundary. Do not expose it to the internet.
+   Matching DLL/PDB package:
+   https://github.com/Vlad-BloodMoon/opensim/releases/tag/v0.9.3.1-webrtc.1
+   Configure bin/config/wolfvoice.ini with your voice hostname and key file paths.
+   Install the SAME key contents privately on the server and region hosts.
+   Restart wolfvoice after creating its keys, then restart the updated regions.
 
-   MEASURE your region hosts' egress addresses — do not assume. A region in a
-   NATed container presents its HOST's address. To measure: run  nc -l -p 9999
-   here, then connect to this host on 9999 from the region machine.
+3) ESTATE / PARCEL:
+   Enable voice in estate settings and About Land -> Sound -> Allow Voice Chat.
 
-   nftables example: contrib/nftables.conf.example
+Health check from an allowed region host:
+   curl https://$hostname_fqdn:${RPC_PORT}/
+   Expected public response: ok
 
-2) EACH OPENSIM REGION. Two separate things, and both are required:
-
-   a) Copy contrib/wolfvoice.ini to  <region>/bin/config/wolfvoice.ini
-      and set:
-          WebRtcVoiceServerURI = https://$hostname_fqdn:${RPC_PORT}
-      Your OpenSim MUST have the os-webrtc-janus addon compiled in — it provides
-      WebRtcVoice.dll and the region-side capabilities. You do not need to run a
-      Janus gateway alongside it. Then restart the region.
-
-      GET IT FROM THE WOLF FORK, AND THE FIXED BRANCH:
-          git clone -b chatsession-p2p-session-id-and-fast-fail \
-              https://github.com/wolfsoftwaresystemsltd/os-webrtc-janus.git \
-              os-webrtc-janus
-      Upstream is archived by its author and the fork's main is identical to it,
-      so a plain clone of either builds the BROKEN version: ChatSessionRequest
-      invents a P2P session id, which breaks Firestorm text IMs grid-wide as soon
-      as WebRTC voice is switched on.
-
-   b) ALLOW VOICE ON THE ESTATE AND THE PARCEL.
-          About Land -> Sound -> Allow Voice Chat
-      This is the most common reason for "it does nothing": with voice disallowed
-      on the parcel the viewer never even asks the region for voice, so nothing
-      appears in any log. See docs/TROUBLESHOOTING.md.
-
-Check it is alive (from a permitted region host):
-
-     curl https://$hostname_fqdn:${RPC_PORT}/
-     -> {"rooms":0,"service":"wolfvoice","sessions":0}
-
-Logs:   journalctl -u wolfvoice -f
-Docs:   https://github.com/$REPO
-
+Logs: journalctl -u wolfvoice -f
 EOF
