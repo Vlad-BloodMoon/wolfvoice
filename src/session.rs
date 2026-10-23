@@ -1,3 +1,21 @@
+/*
+ * WolfVoice - spatial WebRTC voice for OpenSimulator
+ * By Shadow Wolf and Lone Wolf, Wolf Territories Grid and IntelligentWolf Ltd
+ * Copyright 2026 IntelligentWolf Ltd
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 //! WebRTC transport for one viewer session.
 //!
 //! Responsibilities, in the order they happen:
@@ -9,7 +27,8 @@
 
 use bytes::Bytes;
 use parking_lot::Mutex;
-use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
+use std::collections::HashSet;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -56,34 +75,71 @@ const MAX_DECODE_SAMPLES: usize = 5760;
 /// Allocates one UDP port per peer connection out of the firewalled media range.
 ///
 /// The range in /etc/nftables.conf is 40000-40999, so it is also the hard ceiling
-/// on concurrent sessions. Ports are handed out round-robin and never reclaimed
-/// explicitly: a closed peer connection releases its socket, and by the time the
-/// counter wraps a thousand sessions later the port is long free.
+/// on concurrent sessions. Ports are handed out round-robin.
+///
+/// [HARDENING 2026-10-23] A port is never handed out while it is still in use. Before this
+/// the counter simply wrapped, on the assumption that a port is long free a thousand sessions
+/// later - not true for a long call, which kept its port while the counter came round again
+/// and the new session's bind failed (or two sessions fought over one port). Now every port
+/// handed out is remembered until its session's transport is closed (`release`, from
+/// App::drop_session), and a port is also test-bound first, so one still held by a socket
+/// that has not finished closing (or by anything else on the box) is skipped too.
 pub struct PortPool {
-    next: AtomicU16,
+    next: AtomicU32,
     lo: u16,
     hi: u16,
+    used: Mutex<HashSet<u16>>,
 }
 
 impl PortPool {
     pub fn new(lo: u16, hi: u16) -> Self {
         PortPool {
-            next: AtomicU16::new(lo),
+            next: AtomicU32::new(0),
             lo,
             hi,
+            used: Mutex::new(HashSet::new()),
         }
     }
 
-    pub fn take(&self) -> u16 {
+    /// A free port on `ip` (the address the session will bind), or None when every port of
+    /// the range is in use.
+    pub fn take(&self, ip: &str) -> Option<u16> {
+        // A u32 counter taken modulo the span: it never underflows (the old u16 counter wrapped
+        // to 0 after 65,535 sessions and `n - lo` then underflowed - security scan M5).
         let span = (self.hi - self.lo + 1) as u32;
-        let n = self.next.fetch_add(1, Ordering::Relaxed);
-        self.lo + ((n - self.lo) as u32 % span) as u16
+        let mut used = self.used.lock();
+        for _ in 0..span {
+            let n = self.next.fetch_add(1, Ordering::Relaxed);
+            let port = self.lo + (n % span) as u16;
+            if used.contains(&port) {
+                continue;
+            }
+            // Bound and released at once: the session binds it again a moment later.
+            if std::net::UdpSocket::bind(format!("{ip}:{port}")).is_err() {
+                continue;
+            }
+            used.insert(port);
+            return Some(port);
+        }
+        None
+    }
+
+    /// The session that had `port` is gone and its transport closed.
+    pub fn release(&self, port: u16) {
+        self.used.lock().remove(&port);
+    }
+
+    #[cfg(test)]
+    pub fn in_use(&self) -> usize {
+        self.used.lock().len()
     }
 }
 
 /// One viewer's live transport, paired with the mixer-facing `Session`.
 pub struct Endpoint {
     pub session: Arc<Session>,
+    /// The media port this session holds in the PortPool (released by App::drop_session).
+    pub port: u16,
     pc: Box<dyn PeerConnection>,
     out_track: Arc<TrackLocalStaticSample>,
     out_ssrc: u32,
@@ -130,13 +186,20 @@ impl Endpoint {
             .map_err(|e| format!("write_sample: {e}"))
     }
 
-    /// Push a roster update down the data channel, if it is open yet.
+    /// Push a roster update down the data channel.
+    ///
+    /// A roster records what the listener has been told, so anything that does not
+    /// actually reach the wire has to be un-recorded — otherwise a lost join is
+    /// lost permanently, because nothing in the protocol re-sends one.
     pub async fn send_roster(&self, json: &str) {
         let dc = self.dc.lock().clone();
-        if let Some(dc) = dc {
-            if let Err(e) = dc.send_text(json).await {
-                log::debug!("roster send failed for {}: {e}", self.session.id);
-            }
+        let Some(dc) = dc else {
+            self.session.forget_all_announced();
+            return;
+        };
+        if let Err(e) = dc.send_text(json).await {
+            log::debug!("roster send failed for {}: {e}", self.session.id);
+            self.session.forget_all_announced();
         }
     }
 
@@ -144,8 +207,15 @@ impl Endpoint {
         self.dc.lock().is_some()
     }
 
+    /// Feed the peer connection one trickled candidate.
+    ///
+    /// Both outcomes are reported at a level that survives RUST_LOG=info, because
+    /// the difference between "the viewer never trickled anything" and "we
+    /// rejected what it sent" is the whole diagnosis of a session that sits in
+    /// Checking until it times out, and neither was visible before.
     pub async fn add_ice_candidate(&self, c: &proto::IceCandidate) -> Result<(), String> {
-        self.pc
+        let r = self
+            .pc
             .add_ice_candidate(RTCIceCandidateInit {
                 candidate: c.candidate.clone(),
                 sdp_mid: c.sdp_mid.clone(),
@@ -157,7 +227,29 @@ impl Endpoint {
                 url: None,
             })
             .await
-            .map_err(|e| format!("add_ice_candidate: {e}"))
+            .map_err(|e| format!("add_ice_candidate: {e}"));
+
+        match &r {
+            Ok(()) => {
+                if !self
+                    .session
+                    .received_candidate
+                    .swap(true, Ordering::Relaxed)
+                {
+                    log::info!(
+                        "session {} accepted its first remote ICE candidate",
+                        self.session.id
+                    );
+                }
+            }
+            Err(e) => log::warn!(
+                "session {} REJECTED a remote ICE candidate ({}): {}",
+                self.session.id,
+                crate::log_safe(e),
+                crate::log_safe(&c.candidate)
+            ),
+        }
+        r
     }
 
     pub async fn close(&self) {
@@ -192,6 +284,25 @@ impl PeerConnectionEventHandler for Handler {
             self.session.agent_id,
             state
         );
+        // A session that fails having never been handed a remote candidate did not
+        // fail on connectivity — it failed because the candidates never arrived.
+        // Say which, or the journal cannot tell them apart.
+        if state == RTCPeerConnectionState::Failed
+            && !self.session.received_candidate.load(Ordering::Relaxed)
+        {
+            log::warn!(
+                "session {} agent {} FAILED having received no remote ICE candidate at all; \
+                 the viewer's trickle never reached us",
+                self.session.id,
+                self.session.agent_id
+            );
+        }
+        match state {
+            RTCPeerConnectionState::Failed => self.session.set_end_reason("connection failed (ICE)"),
+            RTCPeerConnectionState::Closed => self.session.set_end_reason("connection closed"),
+            RTCPeerConnectionState::Disconnected => self.session.set_end_reason("connection lost (disconnected)"),
+            _ => {}
+        }
         if matches!(
             state,
             RTCPeerConnectionState::Failed
@@ -258,6 +369,9 @@ impl PeerConnectionEventHandler for Handler {
         log::info!("session {} data channel {:?}", self.session.id, label);
 
         *self.dc.lock() = Some(data_channel.clone());
+        // From here on a roster can actually be delivered, so the mixer is allowed
+        // to spend this listener's join announcements.
+        self.session.set_ready(true);
 
         let session = self.session.clone();
         let slot = self.dc.clone();
@@ -266,16 +380,33 @@ impl PeerConnectionEventHandler for Handler {
                 match evt {
                     DataChannelEvent::OnMessage(msg) => {
                         // The viewer always sends text JSON here
-                        // (llvoicewebrtc.cpp:2672 sendData(..., false)).
+                        // (llvoicewebrtc.cpp:2672 sendData(..., false)), so anything
+                        // else is a message we are silently throwing away — which
+                        // for a join or a position update is indistinguishable from
+                        // a dead voice session. Say so rather than dropping it mute.
                         if !msg.is_string {
+                            log::warn!(
+                                "session {} sent {} bytes of BINARY on the data channel; \
+                                 the protocol is text JSON, so it was discarded",
+                                session.id,
+                                msg.data.len()
+                            );
                             continue;
                         }
                         let Ok(text) = std::str::from_utf8(&msg.data) else {
+                            log::warn!(
+                                "session {} sent non-UTF-8 on the data channel; discarded",
+                                session.id
+                            );
                             continue;
                         };
                         match proto::ViewerDataMessage::parse(text) {
                             Ok(m) => session.apply_data(&m),
-                            Err(e) => log::debug!("bad data-channel json: {e}: {text}"),
+                            Err(e) => log::warn!(
+                                "session {} sent unparseable data-channel json ({e}): {}",
+                                session.id,
+                                crate::log_safe(text)
+                            ),
                         }
                     }
                     DataChannelEvent::OnClose | DataChannelEvent::OnError => break,
@@ -283,6 +414,10 @@ impl PeerConnectionEventHandler for Handler {
                 }
             }
             *slot.lock() = None;
+            // Nothing more can be delivered on this channel, and anything the
+            // viewer knew about its peers died with it.
+            session.set_ready(false);
+            session.set_end_reason("data channel closed");
             log::info!("data channel closed for session {}", session.id);
         }));
     }
@@ -382,24 +517,15 @@ pub async fn establish(
         .await
         .map_err(|e| format!("peer connection build: {e}"))?;
 
-    let track: Arc<dyn TrackLocal> = out_track.clone();
-    pc.add_track(track)
-        .await
-        .map_err(|e| format!("add_track: {e}"))?;
-
-    let offer = RTCSessionDescription::offer(offer_sdp.to_owned())
-        .map_err(|e| format!("parse offer: {e}"))?;
-    pc.set_remote_description(offer)
-        .await
-        .map_err(|e| format!("set_remote_description: {e}"))?;
-
-    let answer = pc
-        .create_answer(None)
-        .await
-        .map_err(|e| format!("create_answer: {e}"))?;
-    pc.set_local_description(answer)
-        .await
-        .map_err(|e| format!("set_local_description: {e}"))?;
+    // [HARDENING 2026-10-23] From here on the peer connection holds the media port: any
+    // failure closes it before returning, so the port is really free when the caller gives it
+    // back to the PortPool.
+    if let Err(e) = negotiate(&pc, out_track.clone(), offer_sdp).await {
+        if let Err(ce) = pc.close().await {
+            log::debug!("close after failed negotiation {}: {ce}", session.id);
+        }
+        return Err(e);
+    }
 
     // WAIT for ICE gathering before reading the answer back.
     //
@@ -464,6 +590,7 @@ pub async fn establish(
 
     Ok(Endpoint {
         session,
+        port,
         pc: Box::new(pc),
         out_track,
         out_ssrc,
@@ -472,6 +599,29 @@ pub async fn establish(
         encoder: Mutex::new(encoder),
         packet_timestamp: Mutex::new(rand_u32()),
     })
+}
+
+/// Add our outbound track, apply the viewer's offer and set our answer.
+async fn negotiate<P: PeerConnection>(pc: &P, out_track: Arc<TrackLocalStaticSample>, offer_sdp: &str) -> Result<(), String> {
+    let track: Arc<dyn TrackLocal> = out_track;
+    pc.add_track(track)
+        .await
+        .map_err(|e| format!("add_track: {e}"))?;
+
+    let offer = RTCSessionDescription::offer(offer_sdp.to_owned())
+        .map_err(|e| format!("parse offer: {e}"))?;
+    pc.set_remote_description(offer)
+        .await
+        .map_err(|e| format!("set_remote_description: {e}"))?;
+
+    let answer = pc
+        .create_answer(None)
+        .await
+        .map_err(|e| format!("create_answer: {e}"))?;
+    pc.set_local_description(answer)
+        .await
+        .map_err(|e| format!("set_local_description: {e}"))?;
+    Ok(())
 }
 
 /// Return the SDP we answered with, for handing back to the viewer.
@@ -521,15 +671,35 @@ mod tests {
 
     #[test]
     fn port_pool_stays_inside_the_firewalled_range() {
-        let pool = PortPool::new(40000, 40002);
+        let pool = PortPool::new(46000, 46002);
         let mut seen = Vec::new();
         for _ in 0..7 {
-            let p = pool.take();
-            assert!((40000..=40002).contains(&p), "port {p} escaped the range");
+            let p = pool.take("127.0.0.1").expect("a free port");
+            assert!((46000..=46002).contains(&p), "port {p} escaped the range");
             seen.push(p);
+            pool.release(p);
         }
         // It must actually cycle rather than return one port forever.
         assert!(seen.iter().any(|p| *p != seen[0]));
+    }
+
+    /// [HARDENING 2026-10-23] Gap 9: a port still held by a live session, or still bound by
+    /// anything, is never handed out again; a released one is.
+    #[test]
+    fn port_pool_skips_ports_still_in_use() {
+        let pool = PortPool::new(46010, 46012);
+        let a = pool.take("127.0.0.1").unwrap();
+        let b = pool.take("127.0.0.1").unwrap();
+        // Something else is bound to the third port (a socket that has not finished closing).
+        let third = (46010..=46012).find(|p| *p != a && *p != b).unwrap();
+        let held = std::net::UdpSocket::bind(format!("127.0.0.1:{third}")).unwrap();
+        assert_eq!(pool.take("127.0.0.1"), None, "every port is in use");
+        assert_eq!(pool.in_use(), 2);
+        pool.release(a);
+        assert_eq!(pool.take("127.0.0.1"), Some(a), "the released port is the free one");
+        drop(held);
+        assert_eq!(pool.take("127.0.0.1"), Some(third));
+        let _ = b;
     }
 
     #[test]

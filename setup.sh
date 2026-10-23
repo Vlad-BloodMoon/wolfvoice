@@ -2,11 +2,11 @@
 #
 # wolfvoice installer.
 #
-#   curl -fsSL https://raw.githubusercontent.com/wolfsoftwaresystemsltd/wolfvoice/main/setup.sh | sudo bash
+#   curl -fsSL https://raw.githubusercontent.com/intelligentwolf/wolfvoice/main/setup.sh | sudo bash
 #
 # or, to see what it will do first (recommended):
 #
-#   curl -fsSLO https://raw.githubusercontent.com/wolfsoftwaresystemsltd/wolfvoice/main/setup.sh
+#   curl -fsSLO https://raw.githubusercontent.com/intelligentwolf/wolfvoice/main/setup.sh
 #   less setup.sh && sudo bash setup.sh
 #
 # What it does:
@@ -15,17 +15,19 @@
 #   3. creates an unprivileged `wolfvoice` system user
 #   4. obtains a TLS certificate with certbot, and installs renewal hooks that
 #      open port 80 only for the seconds a renewal needs it
-#   5. installs and starts a hardened systemd unit
-#   6. prints the firewall rules and the OpenSim region config you still need
+#   5. creates the relay key and the credential key (0.2.0+) if they are missing
+#   6. installs and starts a hardened systemd unit
+#   7. prints the firewall rules and the OpenSim region config you still need
 #
 # It does NOT touch your firewall — that is yours to review. It prints exactly
 # what to add.
 #
-# Copyright 2026 Wolf Software Systems Ltd. Licensed under the Apache License 2.0.
+# By Shadow Wolf and Lone Wolf, Wolf Territories Grid and IntelligentWolf Ltd.
+# Copyright 2026 IntelligentWolf Ltd. Licensed under the Apache License 2.0.
 
 set -euo pipefail
 
-REPO="wolfsoftwaresystemsltd/wolfvoice"
+REPO="intelligentwolf/wolfvoice"
 PREFIX="${PREFIX:-/usr/local/bin}"
 CONFDIR="/etc/wolfvoice"
 TLSDIR="$CONFDIR/tls"
@@ -124,6 +126,10 @@ id "$SERVICE_USER" >/dev/null 2>&1 || \
             --shell /usr/sbin/nologin "$SERVICE_USER"
 info "service user: $SERVICE_USER"
 
+# An upgrade from 0.1.x must not start demanding a relay key from regions that do not
+# send one yet, so keys are only created on a FRESH install (see the Keys step).
+fresh=1
+[ -e "$PREFIX/wolfvoice" ] && fresh=0
 install -o root -g root -m 0755 "$tmp/wolfvoice" "$PREFIX/wolfvoice"
 info "binary: $PREFIX/wolfvoice"
 
@@ -172,6 +178,28 @@ else
         }
     info "certificate published to $TLSDIR"
 fi
+
+# ── keys ──────────────────────────────────────────────────────────────────────
+# The relay key authenticates every region request; the credential key signs the
+# tickets that admit an avatar to a call or group room (docs/SECURITY.md). Existing
+# keys are never replaced: every region host holds a copy. On an upgrade none are
+# created - regions running a module without keys would be refused - so make them
+# by hand once your regions run the hardened module (README step 3).
+step "Keys"
+newkey() { od -An -tx1 -N32 /dev/urandom | tr -d ' \n'; }
+for k in rpc_key cred_key; do
+    if [ -s "$CONFDIR/$k" ]; then
+        info "$CONFDIR/$k already present, leaving it alone"
+    elif [ "$fresh" = 1 ]; then
+        (umask 027; newkey > "$CONFDIR/$k")
+        info "created $CONFDIR/$k"
+    else
+        info "upgrade: NOT creating $CONFDIR/$k (README step 3, once regions run the hardened module)"
+        continue
+    fi
+    chown root:"$SERVICE_USER" "$CONFDIR/$k"
+    chmod 0640 "$CONFDIR/$k"
+done
 
 # ── systemd ───────────────────────────────────────────────────────────────────
 step "systemd unit"
@@ -234,9 +262,9 @@ cat <<EOF
      ${RPC_PORT}/tcp              from YOUR REGION HOSTS ONLY
      ${MEDIA_LO}-${MEDIA_HI}/udp      from anywhere (viewers dial in)
 
-   The ${RPC_PORT}/tcp endpoint has NO AUTHENTICATION OF ITS OWN. OpenSim posts a
-   bare JSON-RPC body with no credential, so that source restriction plus TLS is
-   the entire security boundary. Do not expose it to the internet.
+   Every request on ${RPC_PORT}/tcp must carry the relay key, but keep the source
+   restriction too: it is the first line, and a region module without keys
+   (older addons, OpenSim's built-in copy) only works with a keyless wolfvoice.
 
    MEASURE your region hosts' egress addresses — do not assume. A region in a
    NATed container presents its HOST's address. To measure: run  nc -l -p 9999
@@ -244,25 +272,21 @@ cat <<EOF
 
    nftables example: contrib/nftables.conf.example
 
-2) EACH OPENSIM REGION. Two separate things, and both are required:
+2) EACH OPENSIM REGION. Three things, all required (README steps 2-5):
 
-   a) Copy contrib/wolfvoice.ini to  <region>/bin/config/wolfvoice.ini
-      and set:
+   a) Build the hardened region module into OpenSim - branch
+      chatsession-p2p-session-id-and-fast-fail of
+          https://github.com/intelligentwolf/os-webrtc-janus
+      The README says how for each kind of OpenSim tree.
+
+   b) Copy $CONFDIR/rpc_key and $CONFDIR/cred_key to every region host as
+      /etc/opensim/voice_rpc_key and /etc/opensim/voice_cred_key (readable by
+      the OpenSim user only), then copy contrib/wolfvoice.ini to
+      <region>/bin/config/wolfvoice.ini with
           WebRtcVoiceServerURI = https://$hostname_fqdn:${RPC_PORT}
-      Your OpenSim MUST have the os-webrtc-janus addon compiled in — it provides
-      WebRtcVoice.dll and the region-side capabilities. You do not need to run a
-      Janus gateway alongside it. Then restart the region.
+      and restart the region.
 
-      GET IT FROM THE WOLF FORK, AND THE FIXED BRANCH:
-          git clone -b chatsession-p2p-session-id-and-fast-fail \
-              https://github.com/wolfsoftwaresystemsltd/os-webrtc-janus.git \
-              os-webrtc-janus
-      Upstream is archived by its author and the fork's main is identical to it,
-      so a plain clone of either builds the BROKEN version: ChatSessionRequest
-      invents a P2P session id, which breaks Firestorm text IMs grid-wide as soon
-      as WebRTC voice is switched on.
-
-   b) ALLOW VOICE ON THE ESTATE AND THE PARCEL.
+   c) ALLOW VOICE ON THE ESTATE AND THE PARCEL.
           About Land -> Sound -> Allow Voice Chat
       This is the most common reason for "it does nothing": with voice disallowed
       on the parcel the viewer never even asks the region for voice, so nothing
@@ -271,7 +295,7 @@ cat <<EOF
 Check it is alive (from a permitted region host):
 
      curl https://$hostname_fqdn:${RPC_PORT}/
-     -> {"rooms":0,"service":"wolfvoice","sessions":0}
+     -> ok
 
 Logs:   journalctl -u wolfvoice -f
 Docs:   https://github.com/$REPO

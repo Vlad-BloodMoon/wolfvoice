@@ -18,7 +18,7 @@
 ## Install
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/wolfsoftwaresystemsltd/wolfvoice/main/setup.sh
+curl -fsSLO https://raw.githubusercontent.com/intelligentwolf/wolfvoice/main/setup.sh
 less setup.sh
 sudo bash setup.sh
 ```
@@ -27,8 +27,8 @@ Or by hand:
 
 ```bash
 # 1. binary
-curl -fsSLO https://github.com/wolfsoftwaresystemsltd/wolfvoice/releases/latest/download/wolfvoice-x86_64-linux-musl
-curl -fsSLO https://github.com/wolfsoftwaresystemsltd/wolfvoice/releases/latest/download/wolfvoice-x86_64-linux-musl.sha256
+curl -fsSLO https://github.com/intelligentwolf/wolfvoice/releases/latest/download/wolfvoice-x86_64-linux-musl
+curl -fsSLO https://github.com/intelligentwolf/wolfvoice/releases/latest/download/wolfvoice-x86_64-linux-musl.sha256
 sha256sum -c wolfvoice-x86_64-linux-musl.sha256
 sudo install -m0755 wolfvoice-x86_64-linux-musl /usr/local/bin/wolfvoice
 
@@ -50,11 +50,17 @@ Everything is environment variables; there is no config file.
 |---|---|---|
 | `WOLFVOICE_PUBLIC_IP` | **yes** | Public address to advertise in ICE candidates. The service refuses to start without it rather than guess. |
 | `RUST_LOG` | no | `info` (default), or `debug` for per-session detail. |
+| `WOLFVOICE_RPC_KEY` | no | The relay key (else `/etc/wolfvoice/rpc_key`). Without one the JSON-RPC is open to anything that reaches it. 0.2.0+, see [SECURITY.md](SECURITY.md). |
+| `WOLFVOICE_CRED_KEY` | no | The credential key (else `/etc/wolfvoice/cred_key`); without one, tickets are checked against the relay key. 0.2.0+. |
+| `WOLFVOICE_LEGACY_CREDENTIALS` | no | `0` stops accepting tickets signed with the relay key once a credential key is set. Default: accepted (change-over). 0.2.0+. |
+| `WOLFVOICE_ICE_ALLOW` | no | Comma-separated CIDRs of your own networks whose ICE candidates may be tried; otherwise only public addresses. 0.2.0+. |
+| `WOLFVOICE_BIND` | no | Address and port of the JSON-RPC listener. Default `0.0.0.0:9443`. |
+| `WOLFVOICE_MEDIA_LO` / `WOLFVOICE_MEDIA_HI` | no | The UDP media port range. Default 40000-40999; must give at least 900 ports (`MAX_SESSIONS`). Change your firewall to match. |
+| `WOLFVOICE_NPC_HOSTS` | no | Optional story/NPC voices (`wolf.npc_speak`): comma-separated host names WAV clips may be fetched from over https. Unset (the default): off. 0.2.0+. |
+| `WOLFVOICE_BRIDGE_KEY` | no | Optional Discord voice bridge (else `/etc/wolfvoice/bridge_key`, at least 32 characters). With no key the bridge port is never opened (the default). Needs a bridge client that is not part of this repository. 0.2.0+. |
+| `WOLFVOICE_BRIDGE_BIND` | no | The bridge listener, default `0.0.0.0:9445`; firewall it to the bridge client only. |
 
-Ports and paths are compile-time constants at the top of `src/main.rs`:
-`RPC_BIND` (0.0.0.0:9443), `MEDIA_PORT_LO`/`HI` (40000–40999), and the TLS paths
-under `/etc/wolfvoice/tls/`. If you change the media range, change your firewall to
-match — they must agree.
+The TLS paths are fixed: `/etc/wolfvoice/tls/fullchain.pem` and `privkey.pem`.
 
 ## TLS
 
@@ -92,11 +98,12 @@ ip saddr @voice_rpc_clients tcp dport 9443 accept   # region hosts ONLY
 udp dport 40000-40999 accept                        # viewers, from anywhere
 ```
 
-**The JSON-RPC endpoint has no authentication of its own.** OpenSim's connector posts
-a bare JSON-RPC body with no credential, so that source restriction plus TLS is the
-entire boundary. Identity is still trustworthy — the *region* tells us which agent a
-request belongs to, and the viewer never gets to assert who it is — but anyone who can
-reach the port can create sessions.
+**Keep the source restriction even with a relay key.** From 0.2.0 every request must
+carry the relay key ([SECURITY.md](SECURITY.md)), so reaching the port is no longer
+enough to create sessions; the firewall rule remains the first line. Without a relay
+key (wolfvoice 0.1.x, or 0.2.0 serving a region module that sends none) the source
+restriction plus TLS is the entire boundary. Identity is trustworthy either way - the
+*region* tells us which agent a request belongs to; the viewer never asserts who it is.
 
 **Measure your region hosts' egress addresses; do not assume them.** A region in a
 NATed container presents its host's address, which may be nothing like the name you
@@ -121,7 +128,10 @@ journalctl -u wolfvoice -f
 
 # health, from a permitted region host or over loopback
 curl -k https://127.0.0.1:9443/
+# ok
+curl -k -H "X-Wolfvoice-Key: $(cat /etc/wolfvoice/rpc_key)" https://127.0.0.1:9443/
 # {"rooms":1,"service":"wolfvoice","sessions":3}
+# (0.1.x answers the counts to anyone)
 ```
 
 Useful log lines:
