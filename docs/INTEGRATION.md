@@ -1,40 +1,24 @@
-# 0.2.0 integration test
+# WolfVoice v0.2.0-bloodmoon.1
 
-This branch merges upstream d9ec3e9ececc6c1f3df8e264dc28032903e436ee into
-this fork without changing the deployed grid. Runtime sources use upstream's
-implementation of join readiness, primary transitions, failed roster sends,
-per-user gain and mute. The previous implementation remains in git history and
-the grid-tested v0.1.1-bloodmoon.1 release remains available for rollback.
+Based on intelligentwolf/wolfvoice d9ec3e9ececc6c1f3df8e264dc28032903e436ee.
+Runtime sources are unchanged from that upstream version; this release integrates and documents it in this fork.
 
-## Scope
+## Confirmed on the deployed grid
+- Local voice, participant dots and per-user volume.
+- Private voice calls from IM; invitation and audio confirmed by the operator.
+- Hosted simulators updated and restarted.
 
-Keep the existing installation, systemd unit, TLS certificates, account and
-firewall rules. Do not run either installer as part of this upgrade. The retained
-setup.sh still installs the last stable fork release, not this test branch.
-Upstream example configuration and service files are reference material only.
+Group voice is implemented upstream but not yet confirmed in these operator tests. Ad-hoc conferences need an additional external service and are not enabled here.
 
-## Validation sequence
+## Existing installation
+Keep your current service, TLS files, user, firewall/IP restrictions and resource limits. Back up and replace only the voice binary, then restart the service during a planned interruption.
 
-1. Run cargo test --locked, clippy and build examples in GitHub Actions.
-2. Build the three matching WebRTC modules against the OpenSim version used by
-   the test simulator. The earlier one-DLL P2P prototype must not be combined
-   with these modules.
-3. Prefer a separate voice test instance with its own TCP listener and disjoint
-   UDP media range. Set WOLFVOICE_BIND, WOLFVOICE_MEDIA_LO and WOLFVOICE_MEDIA_HI;
-   this must not change or restart the existing shared voice service.
-4. Install identical relay and credential key contents on the test voice host
-   and test region host. Use RpcKeyFile and CredKeyFile in the EXISTING dedicated
-   WebRTC INI and point only the test simulator at the test endpoint.
-5. Validate local audio, participant dots, individual volume/mute, delayed joins,
-   Reset Voice, two-way private invitation/accept/decline/hangup, and return to
-   local voice. Then validate group voice and calls between two updated sims.
-6. Only after validation prepare the shared-service rollout and rollback. A relay
-   key on the shared service rejects requests from old modules that send no key:
-   do not enable it while unchanged simulators still depend on that service.
+The matching three WebRTC region DLLs and PDBs are available in Vlad-BloodMoon/opensim release v0.9.3.1-webrtc.1. Do not use the earlier single-DLL prototype.
 
-Private calls and ordinary group voice use signed credentials. Ad-hoc conferences
-and Wolf Chat rooms additionally need ConferenceApiUrl and its external service;
-they are not enabled by this integration.
+A shared server can retain local voice for old region modules while no relay key is configured. A separate credential key enables signed calls with updated modules: server /etc/wolfvoice/cred_key, region CredKeyFile pointing to the same secret contents. Enabling the relay key requires every client region to send it; otherwise its requests are refused.
 
-No binary has been deployed by preparing this branch. Automated tests do not
-replace the Firestorm tests listed above.
+The public release contains no grid key, private configuration or credentials.
+Binary build source: d2d2670181b12354d51d83611ae5dbf36b822586 (GitHub Actions run 39933496255).
+Previous release v0.1.1-bloodmoon.1 remains available for rollback.
+
+The server binary uses the existing listener and media ports. On the deployed grid, only the credential key was enabled during rollout; IP allowlisting remains in place. Do not publish the shared credential key. Paths and server addresses in public examples must be adapted by each operator.

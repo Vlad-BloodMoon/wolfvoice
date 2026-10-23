@@ -1,10 +1,13 @@
 # wolfvoice
 
-> Integration test branch for this community fork. Runtime sources match upstream
-> commit `d9ec3e9ececc6c1f3df8e264dc28032903e436ee` (0.2.0).
-> This build has not been validated on the BloodMoon grid. The last grid-tested
-> release remains [v0.1.1-bloodmoon.1](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.1.1-bloodmoon.1).
-> Read [the integration notes](docs/INTEGRATION.md) before upgrading.
+## Current fork release: v0.2.0-bloodmoon.1
+
+[Download the release](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.1).
+The Linux x86_64 binary is based on upstream 0.2.0 and has been deployed on the grid.
+Local voice, participant dots, individual volume and private IM voice calls were confirmed by the operator. All hosted simulators were updated and restarted.
+Group voice is implemented upstream but has not been confirmed in these operator tests. Ad-hoc conferences need a separate external service and are not enabled by this release.
+
+Existing installations: replace only the binary, keep your systemd unit, TLS files, firewall rules and limits. See [deployment notes](docs/INTEGRATION.md).
 
 **By Shadow Wolf and Lone Wolf, Wolf Territories Grid and IntelligentWolf Ltd.**
 
@@ -91,16 +94,13 @@ positional audio.
 
 ## Quick start
 
-### 1. Prepare the voice server update
+### 1. Update the voice server
 
-For this integration branch, build or download the test binary from this fork.
-Do not run the upstream installer or replace your existing systemd unit, TLS
-configuration, firewall rules or service account. Replace only the binary after
-validation and keep the previous binary for rollback.
+Download `wolfvoice-x86_64-linux-musl` and its `.sha256` file from [this fork's release](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.1).
+Verify the checksum, back up the current binary and replace it during a planned voice interruption. Keep the existing systemd unit, certificates, account, IP restrictions and configuration. No installer is needed for an existing installation.
 
-`setup.sh` is retained as the installer for the last tested release
-`v0.1.1-bloodmoon.1`; it does **not** install this 0.2.0 integration build.
-Follow [docs/INTEGRATION.md](docs/INTEGRATION.md) for the test sequence.
+The retained `setup.sh` now points to this fork's v0.2.0-bloodmoon.1 binary.
+It is a fresh-install helper, not the rolling-upgrade procedure. Signing keys and matching region modules must be configured separately; see [deployment notes](docs/INTEGRATION.md).
 
 ### 2. Build the region module into OpenSim
 
