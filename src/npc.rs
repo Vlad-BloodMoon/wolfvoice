@@ -306,8 +306,10 @@ pub fn parse_wav(b: &[u8]) -> Result<(u32, Vec<i16>), String> {
             }
             let end = body.saturating_add(size).min(b.len());
             let samples = b[body..end]
-                .chunks_exact(2)
-                .map(|c| i16::from_le_bytes([c[0], c[1]]))
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .map(|c| i16::from_le_bytes(*c))
                 .collect();
             return Ok((rate, samples));
         }

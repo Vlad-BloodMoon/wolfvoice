@@ -148,7 +148,9 @@ pub async fn read_frame<R: AsyncRead + Unpin>(r: &mut R) -> std::io::Result<(u8,
 /// at FRAC_1_SQRT_2 on both sides (room.rs mix_room_with); (L + R) / sqrt 2 gives each voice back at its own level.
 pub fn downmix(stereo: &[f32]) -> Vec<f32> {
     stereo
-        .chunks_exact(2)
+        .as_chunks::<2>()
+        .0
+        .iter()
         .map(|lr| ((lr[0] + lr[1]) * std::f32::consts::FRAC_1_SQRT_2).clamp(-1.0, 1.0))
         .collect()
 }
