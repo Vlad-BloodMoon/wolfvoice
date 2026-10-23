@@ -10,7 +10,7 @@ symptom is silence with nothing obvious in the logs.
 ## 1. The addon
 
 wolfvoice does not talk to OpenSim directly. It relies on
-[os-webrtc-janus](https://github.com/wolfsoftwaresystemsltd/os-webrtc-janus) for the region-side
+[os-webrtc-janus](https://github.com/intelligentwolf/os-webrtc-janus) for the region-side
 half: registering the `ProvisionVoiceAccountRequest`, `VoiceSignalingRequest` and
 `ParcelVoiceInfoRequest` capabilities, advertising `VoiceServerType = webrtc` to the
 viewer, and forwarding those capability calls onward as JSON-RPC.
@@ -26,63 +26,31 @@ of Linden Lab's protocol that ride the data channel (position, per-user gain, mu
 the speaker roster) therefore have nowhere to travel. wolfvoice terminates that
 channel and mixes per listener instead.
 
-**First check whether your OpenSim already ships it.** Since 26 Feb 2026 the addon is
-integrated into both upstream OpenSimulator (`OpenSim/Addons/os-webrtc-janus/`) and
-OpenSim-NGC (`Addons/os-webrtc-janus/`). If either directory exists, **do not clone
-anything** — a second copy in `addon-modules/` breaks the build with duplicate project
-names. Just build OpenSim as you normally do and skip to region configuration.
+**Which module, and how to build it.** Use the hardened module on branch
+`chatsession-p2p-session-id-and-fast-fail` of
+[intelligentwolf/os-webrtc-janus](https://github.com/intelligentwolf/os-webrtc-janus):
+it is what wolfvoice 0.2.0 is tested with, and the only version that sends the relay
+key, signs call and group tickets and feeds avatar positions. The step-by-step build
+for each kind of tree - the 0.9.3.x release (addon-module), upstream master (replace the
+built-in copy), OpenSim-NGC (not supported) and binary-only installs - is
+[step 2 of the README](../README.md#2-build-the-region-module-into-opensim). It needs a
+.NET 8 OpenSim (0.9.3.0 or newer).
 
-On an **older tree** without it, clone the Wolf fork's fixed branch (upstream
-`Misterblue/os-webrtc-janus` is archived; its `main` still invents a P2P session id in
-`ChatSessionRequest`, which broke Firestorm text IMs grid-wide whenever WebRTC voice
-was enabled):
-
-```bash
-cd opensim/addon-modules
-git clone -b chatsession-p2p-session-id-and-fast-fail https://github.com/wolfsoftwaresystemsltd/os-webrtc-janus.git os-webrtc-janus
-cd ..
-```
-
-Then build — which build you have is told by the tree itself:
-
-**Classic tree** (`runprebuild.sh` exists at the OpenSim root):
-
-```bash
-./runprebuild.sh    # also (re)generates compile.sh — normal for it to be missing before this
-./compile.sh        # or: dotnet build -c Release OpenSim.sln
-```
-
-The DLLs land directly in `bin/`.
-
-**dotnet-era tree** (no `runprebuild.sh`; `OpenSim.sln` + `Directory.Build.props` at
-the root — "the only .sh is the addon's own updateVersion.sh" means you are here).
-Prebuild is gone and the solution only builds registered projects, so register the
-module once, then build via the solution:
-
-```bash
-dotnet sln OpenSim.sln add \
-    addon-modules/os-webrtc-janus/WebRtcVoice/WebRtcVoice.csproj \
-    addon-modules/os-webrtc-janus/WebRtcVoiceServiceModule/WebRtcVoiceServiceModule.csproj \
-    addon-modules/os-webrtc-janus/WebRtcVoiceRegionModule/WebRtcVoiceRegionModule.csproj \
-    addon-modules/os-webrtc-janus/Janus/WebRtcJanusService.csproj
-dotnet build --configuration Release OpenSim.sln
-```
-
-Output goes to `build/Release/<AssemblyName>/`, **not** `bin/` — copy
-`WebRtcVoice.dll`, `WebRtcVoiceServiceModule.dll` and `WebRtcVoiceRegionModule.dll`
-into the `bin/` your regions run from, then restart the region.
-
-All three DLLs are needed. `WebRtcJanusService.dll` is also built, and is simply
-unused when you point the connector at wolfvoice. (A binary-only distribution with no
-source tree cannot build the addon — build in a source tree of the exact same OpenSim
-version and copy the DLLs in.)
+All three DLLs are needed in the `bin/` your regions run from: `WebRtcVoice.dll`,
+`WebRtcVoiceServiceModule.dll` and `WebRtcVoiceRegionModule.dll`.
+`WebRtcJanusService.dll` is also built, and is simply unused when you point the
+connector at wolfvoice.
 
 Check what you actually have deployed rather than trusting the build:
 
 ```bash
 tr -d '\000' < bin/WebRtcVoice.dll | grep -c provision_voice_account_request
 # 1 or more means the connector is present
+tr -d '\000' < bin/WebRtcVoiceRegionModule.dll | grep -c PositionFeed
+# 1 or more means the hardened module (0 = a module without keys or position feed)
 ```
+
+Nothing is configured on the Robust server: each region posts to wolfvoice directly.
 
 ## 2. Region configuration
 
@@ -95,13 +63,17 @@ server URL:
     SpatialVoiceService = WebRtcVoice.dll:WebRtcVoiceServiceConnector
     NonSpatialVoiceService = WebRtcVoice.dll:WebRtcVoiceServiceConnector
     WebRtcVoiceServerURI = https://voice.example.org:9443
+    RpcKeyFile = /etc/opensim/voice_rpc_key
+    CredKeyFile = /etc/opensim/voice_cred_key
     MessageDetails = false
 
 [VivoxVoice]
     enabled = false
 ```
 
-Then restart the region.
+Then restart the region. The keys are described in [SECURITY.md](SECURITY.md); the
+host in `WebRtcVoiceServerURI` must be the name on wolfvoice's certificate, because the
+hardened module always verifies it.
 
 **Why `bin/config/` and not `OpenSim.ini`.** OpenSim reads every `.ini` in that
 directory *after* `OpenSim.ini` and treats them as overrides
@@ -202,18 +174,13 @@ so leaving that value empty is fine.
 ### If you are on an older addon build
 
 This is fixed in the
-[Wolf fork branch](https://github.com/wolfsoftwaresystemsltd/os-webrtc-janus) and in the
-copies integrated into OpenSimulator core and OpenSim-NGC since 26 Feb 2026 — those
-handle `start p2p voice` by recomputing the P2P session id (XOR of the two agent ids)
-and replying via `IEventQueue.ChatterBoxSessionStartReply`. **Update the addon (or
-OpenSim itself) if you can.**
-
-Check first whether you actually can: current upstream uses API that older OpenSim trees
-do not have (`OSDMap.TryGetUUID` / `TryGetString`, `UUID.ulonga`/`ulongb`). If your
-OpenSim predates those, the current addon will not build against it, and updating the
-addon means updating OpenSim too. In that case adding the handler to your existing
-`WebRtcVoiceRegionModule.cs` is the legitimate short path — it needs only
-`IEventQueue.ChatterBoxSessionStartReply`, which has been present for a long time.
+[hardened branch](https://github.com/intelligentwolf/os-webrtc-janus/tree/chatsession-p2p-session-id-and-fast-fail)
+and in upstream OpenSimulator ([opensim/opensim#69](https://github.com/opensim/opensim/pull/69)).
+Those handle `start p2p voice` by echoing the viewer's own session id (the XOR of the
+two agent ids) and replying via `IEventQueue.ChatterBoxSessionStartReply`, and answer
+`start conference` with an immediate failure instead of a 30-second timeout. The
+hardened branch builds against OpenSimulator 0.9.3.0, so updating the module does not
+mean updating OpenSim.
 
 Whichever route, the DLL is loaded into the OpenSim process
 at startup via Mono.Addins, so **the region must be restarted** — replacing the file on

@@ -147,11 +147,16 @@ out to a fleet.
 ## Useful one-liners
 
 ```bash
-# is the service alive and how busy?
+# is the service alive? ("ok"); and how busy (with the relay key)?
 curl -k https://127.0.0.1:9443/
+curl -k -H "X-Wolfvoice-Key: $(sudo cat /etc/wolfvoice/rpc_key)" https://127.0.0.1:9443/
 
-# full end-to-end check without a viewer
-cargo run --release --example two_clients -- https://127.0.0.1:9443
+# full end-to-end check without a viewer (presents the relay key from the environment)
+WOLFVOICE_RPC_KEY="$(sudo cat /etc/wolfvoice/rpc_key)" \
+    cargo run --release --example two_clients -- https://127.0.0.1:9443
+
+# is this region running the hardened module (relay key, position feed)? 1 = yes
+tr -d '\000' < bin/WebRtcVoiceRegionModule.dll | grep -ac PositionFeed
 
 # did this region load the voice modules?
 grep -E "REGION WEBRTC VOICE\]: enabled|WebRtcVoiceServiceConnector enabled" OpenSim.log
