@@ -1,3 +1,21 @@
+/*
+ * WolfVoice - spatial WebRTC voice for OpenSimulator
+ * By Shadow Wolf and Lone Wolf, Wolf Territories Grid and IntelligentWolf Ltd
+ * Copyright 2026 IntelligentWolf Ltd
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 //! End-to-end test: two synthetic viewers against a running wolfvoice.
 //!
 //! This exists because the service would otherwise ship having never answered a
@@ -240,7 +258,9 @@ async fn build_client(
                 "parcel_local_id": 0
             },
             "userID": agent_id,
-            "scene": scene
+            "scene": scene,
+            // The relay key, when the server under test requires one (WOLFVOICE_RPC_KEY).
+            "key": std::env::var("WOLFVOICE_RPC_KEY").unwrap_or_default()
         }
     });
 
@@ -466,7 +486,9 @@ async fn main() -> anyhow::Result<()> {
                 "voice_server_type": "webrtc"
             },
             "userID": "aaaaaaaa-1111-1111-1111-111111111111",
-            "scene": scene
+            "scene": scene,
+            // The relay key, when the server under test requires one (WOLFVOICE_RPC_KEY).
+            "key": std::env::var("WOLFVOICE_RPC_KEY").unwrap_or_default()
         }
     });
     let http = reqwest::Client::builder()

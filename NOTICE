@@ -1,7 +1,8 @@
 wolfvoice
-Copyright 2026 Wolf Software Systems Ltd
+By Shadow Wolf and Lone Wolf, Wolf Territories Grid and IntelligentWolf Ltd
+Copyright 2026 IntelligentWolf Ltd (formerly Wolf Software Systems Ltd)
 
-This product includes software developed by Wolf Software Systems Ltd
+This product includes software developed by IntelligentWolf Ltd
 (https://wolf.uk.com) for the Wolf Territories Grid (https://wolfterritories.org).
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +25,9 @@ projects:
   * os-webrtc-janus by Robert Adams (Mozilla Public License 2.0)
     https://github.com/Misterblue/os-webrtc-janus
     Supplies the OpenSimulator region-side capability handlers and the JSON-RPC
-    connector that wolfvoice receives requests from.
+    connector that wolfvoice receives requests from. The hardened version wolfvoice
+    is tested with is https://github.com/intelligentwolf/os-webrtc-janus (branch
+    chatsession-p2p-session-id-and-fast-fail), under the same licence.
 
   * OpenSimulator (BSD 3-Clause)
     http://opensimulator.org

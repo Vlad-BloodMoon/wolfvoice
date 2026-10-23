@@ -1,15 +1,21 @@
 [package]
 name = "wolfvoice"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
-rust-version = "1.75"
+rust-version = "1.88"
 description = "Spatial WebRTC voice service for OpenSimulator, speaking Linden Lab's voice protocol"
-authors = ["Wolf Software Systems Ltd <paul@wolf.uk.com>"]
+authors = ["Shadow Wolf", "Lone Wolf", "Wolf Territories Grid", "IntelligentWolf Ltd"]
 license = "Apache-2.0"
-repository = "https://github.com/wolfsoftwaresystemsltd/wolfvoice"
+repository = "https://github.com/intelligentwolf/wolfvoice"
 readme = "README.md"
 keywords = ["opensimulator", "webrtc", "voice", "opensim", "spatial-audio"]
 categories = ["multimedia::audio", "network-programming"]
+
+# By Shadow Wolf and Lone Wolf, Wolf Territories Grid and IntelligentWolf Ltd.
+# Speaks Linden Lab's WebRTC voice contract so Firestorm (and any LL-compatible viewer)
+# reaches it through the region's own capabilities, with spatialisation, per-user gain
+# and mute performed here (server-side) because that is where LL's design puts them.
+# See README.md and docs/PROTOCOL.md for the wire contract and its citations.
 
 [dependencies]
 # webrtc 0.20.x is a REWRITE over the sans-I/O `rtc` core; the pre-0.20 APIBuilder
@@ -38,14 +44,23 @@ futures = "0.3"
 log = "0.4"
 env_logger = "0.11"
 
-# Only for examples/ — the end-to-end and load harnesses. Not linked into the service.
+# The optional story-voice feature (wolf.npc_speak, src/npc.rs, off unless
+# WOLFVOICE_NPC_HOSTS is set) fetches a WAV clip over https. rustls with the bundled
+# webpki roots, so the hardened unit needs no system trust store.
+reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
+
+# HMAC for room credentials (main.rs call_credentials). ring is already in the build
+# through rustls, so this adds no new crate.
+ring = "0.17"
+
+# Only for examples/ - the end-to-end, compatibility and load harnesses. Not linked
+# into the service.
 [dev-dependencies]
 anyhow = "1"
-reqwest = { version = "0.11", features = ["json", "rustls-tls"], default-features = false }
 
 [profile.release]
 opt-level = 3
 lto = "fat"
 codegen-units = 1
-# No panic=abort deliberately: a panic in one voice session must not take down every
-# other participant's audio.
+# No panic=abort: a panic in one voice session must not take down every other
+# participant's audio.

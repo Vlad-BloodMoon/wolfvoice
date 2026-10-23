@@ -1,58 +1,19 @@
 # wolfvoice
 
-## BloodMoon fork — participant dots and individual volume
+> Integration test branch for this community fork. Runtime sources match upstream
+> commit `d9ec3e9ececc6c1f3df8e264dc28032903e436ee` (0.2.0).
+> This build has not been validated on the BloodMoon grid. The last grid-tested
+> release remains [v0.1.1-bloodmoon.1](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.1.1-bloodmoon.1).
+> Read [the integration notes](docs/INTEGRATION.md) before upgrading.
 
-This community fork builds on upstream WolfVoice by Wolf Software Systems Ltd.
-The BloodMoon fix addresses lost participant announcements in Firestorm; it does
-not modify Firestorm or the official OpenSimulator WebRTC DLLs.
-
-**[Download v0.1.1-bloodmoon.1](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.1.1-bloodmoon.1)**
-— Linux x86_64 and aarch64 binaries, with SHA256 checksums.
-This is a BloodMoon community prerelease, not an official upstream release.
-For Linux x86_64, `wolfvoice-x86_64-linux-musl` is the static build used on BloodMoon.
-The installer in this fork selects this exact BloodMoon release, including its
-SHA256 verification. Back up your installed binary before updating.
-
-### Confirmed on BloodMoon with four participants — 22 October 2026
-
-| Feature | Result |
-|---|---|
-| Local voice audio | Working |
-| Other avatars' white Voice dots | Visible to the participants |
-| Individual participant volume | Controls available and volume adjustment working |
-| Private IM voice calls | Not working in the reported test; investigation ongoing |
-
-Previously, each participant could see their own dot and hear others, while the
-other avatars' dots and individual volume controls were unavailable. The fix
-waits for viewer join readiness, retries announcements not accepted by the
-transport, and reannounces participants when their primary status changes.
-
-**Reset Voice:** the upstream bare-UUID session fix is retained. The automated
-regression suite includes replacement of a session for the same avatar and checks
-that peers are reannounced in both directions. This test is not a full Firestorm
-end-to-end validation of all reset scenarios.
-
-**IM/private calls remain under investigation.** In the reported test, the
-recipient did not receive an invitation; after a failed call, Reset Voice was
-needed to recover local voice. This release does not fix that issue, and group
-calls have not been validated by BloodMoon.
-
-Validation: **35 unit tests passed**, together with Clippy, example builds and
-Shellcheck. The published binaries were built from
-[`a7879aa`](https://github.com/Vlad-BloodMoon/wolfvoice/commit/a7879aa3179499663b0e64b399e754237aff5c19);
-the fix was integrated through [PR #1](https://github.com/Vlad-BloodMoon/wolfvoice/pull/1).
-
-**En français :** correctif BloodMoon validé avec **quatre participants** :
-points Voice des autres avatars visibles et volume individuel fonctionnel.
-Les appels vocaux privés en IM restent en cours d'investigation ; un échec peut
-nécessiter un Reset Voice pour retrouver la Voice locale.
+**By Shadow Wolf and Lone Wolf, Wolf Territories Grid and IntelligentWolf Ltd.**
 
 Spatial WebRTC voice for [OpenSimulator](http://opensimulator.org) — one service that
 Firestorm and browser-based viewers both reach through the region's own capabilities,
 so users of different viewers hear each other, positionally.
 
 wolfvoice is a **voice service backend for
-[os-webrtc-janus](https://github.com/wolfsoftwaresystemsltd/os-webrtc-janus)**. That addon does the
+[os-webrtc-janus](https://github.com/intelligentwolf/os-webrtc-janus)**. That addon does the
 OpenSimulator half — capabilities, provider advertisement, session bookkeeping — and
 wolfvoice is an alternative to point it at when you want the mixing done differently.
 
@@ -73,7 +34,12 @@ OpenSim region  +  os-webrtc-janus addon   ← REQUIRED
 
 **os-webrtc-janus is a hard requirement.** It supplies `WebRtcVoice.dll` and the
 region-side capability handlers that everything here depends on; without it there is
-nothing for a viewer to talk to. See [docs/OPENSIM.md](docs/OPENSIM.md) for building it.
+nothing for a viewer to talk to. See [step 2](#2-build-the-region-module-into-opensim) for building it.
+
+**New in 0.2.0** (see [CHANGELOG.md](CHANGELOG.md)): a relay key and a separate credential
+key, private calls and group voice with signed tickets, positions held to where the
+region says the avatar is, room caps, an ICE candidate filter, and a health endpoint that
+says only `ok` without the key. Use it with the hardened region module from step 2.
 
 What you can skip is running a **Janus gateway server** alongside it. The addon ships
 two backends: `WebRtcJanusService` (which drives Janus) and
@@ -87,8 +53,9 @@ plugs into the second, so you point the addon at wolfvoice instead of at Janus.
   rewrite plaintext signalling in flight could become the media endpoint.
 - **UDP 40000–40999** open to the world. This range is also the ceiling on concurrent
   sessions — one socket per peer connection.
-- **TCP 9443** reachable *from your region hosts only*. This endpoint has no
-  authentication of its own.
+- **TCP 9443** reachable *from your region hosts only*. From 0.2.0 every region
+  request must also carry the shared relay key, and room tickets are signed with a
+  second key - see [docs/SECURITY.md](docs/SECURITY.md).
 - Modest CPU: **~17 ms per listener per second**, spread across all cores. See [Capacity](#capacity).
 
 **For viewers**
@@ -124,140 +91,159 @@ positional audio.
 
 ## Quick start
 
-### 1. Install the voice server
+### 1. Prepare the voice server update
 
-The following installer downloads **v0.1.1-bloodmoon.1 from this fork**, with the
-participant-announcement fix. It uses an explicit release tag because GitHub's
-`latest` download endpoint excludes prereleases. It does not install upstream binaries.
+For this integration branch, build or download the test binary from this fork.
+Do not run the upstream installer or replace your existing systemd unit, TLS
+configuration, firewall rules or service account. Replace only the binary after
+validation and keep the previous binary for rollback.
 
-**Existing installation:** do not rerun the full installer to update your server;
-it configures TLS and systemd. Back up your current binary and its SHA256, download
-the matching binary and `.sha256` from the
-[BloodMoon release](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.1.1-bloodmoon.1),
-verify the checksum, replace only the binary and restart your existing service.
-Keep your configuration and backup for rollback.
+`setup.sh` is retained as the installer for the last tested release
+`v0.1.1-bloodmoon.1`; it does **not** install this 0.2.0 integration build.
+Follow [docs/INTEGRATION.md](docs/INTEGRATION.md) for the test sequence.
 
-**New installation** (Linux with systemd; review the script's TLS requirements):
+### 2. Build the region module into OpenSim
 
-```bash
-curl -fsSLO https://raw.githubusercontent.com/Vlad-BloodMoon/wolfvoice/main/setup.sh
-less setup.sh          # it runs as root; read it first
-sudo bash setup.sh
-```
+wolfvoice needs the region half of WebRTC voice: the **os-webrtc-janus** region module.
+Use the hardened version on branch `chatsession-p2p-session-id-and-fast-fail` of
+[intelligentwolf/os-webrtc-janus](https://github.com/intelligentwolf/os-webrtc-janus) -
+it is the one wolfvoice 0.2.0 is tested against, and the only one that sends the relay
+key, signs call tickets and feeds avatar positions. It needs a .NET 8 OpenSimulator
+(0.9.3.0 or newer); it does not build on 0.9.2.x.
 
-The installer detects your platform, downloads and checksums the matching release
-binary, creates an unprivileged service user, obtains a TLS certificate with certbot
-(including renewal hooks), and installs a hardened systemd unit.
-
-### 2. Build os-webrtc-janus into OpenSim
-
-**First, check whether your OpenSim already ships it.** Since 26 Feb 2026 the addon
-is integrated into both upstream OpenSimulator and OpenSim-NGC — if either directory
-below exists, **do not clone anything** (a second copy in `addon-modules/` breaks the
-build with duplicate project names). Just build OpenSim the way you normally do and
-skip to step 3:
+First find out which tree you have, from the OpenSim root:
 
 ```bash
-ls OpenSim/Addons/os-webrtc-janus 2>/dev/null   # upstream master
-ls Addons/os-webrtc-janus         2>/dev/null   # OpenSim-NGC
+ls OpenSim/Addons/os-webrtc-janus 2>/dev/null && echo "B: upstream master, module built in"
+ls Addons/os-webrtc-janus         2>/dev/null && echo "C: OpenSim-NGC"
+ls prebuild.xml                   2>/dev/null && echo "prebuild tree (A or B)"
 ```
 
-On an **older tree** without it, clone the Wolf fork's fixed branch (upstream
-`Misterblue/os-webrtc-janus` is archived, and its `main` still has the
-`ChatSessionRequest` bug that broke Firestorm text IMs grid-wide whenever WebRTC
-voice was enabled):
+**A. OpenSimulator 0.9.3.x release, or a git tree from before 26 Feb 2026**
+(no `OpenSim/Addons/os-webrtc-janus`). Tested with the `opensim-0.9.3.0-source.tar.gz`
+release.
+
+1. Add the module as an addon-module:
+
+   ```bash
+   cd opensim-0.9.3.0-source          # your OpenSim root
+   git clone -b chatsession-p2p-session-id-and-fast-fail \
+       https://github.com/intelligentwolf/os-webrtc-janus.git addon-modules/os-webrtc-janus
+   ```
+
+2. Generate the solution and build. The 0.9.3.0 source archive ships `runprebuild.sh`
+   with Windows line endings and without the execute bit, so `./runprebuild.sh` fails
+   there; these are the commands it runs:
+
+   ```bash
+   cp bin/System.Drawing.Common.dll.linux bin/System.Drawing.Common.dll
+   dotnet bin/prebuild.dll /target vs2022 /targetframework net8_0 /excludedir = "obj | bin" /file prebuild.xml
+   dotnet build -c Release OpenSim.sln
+   ```
+
+   (In a git checkout `./runprebuild.sh && ./compile.sh` does the same.) The module's
+   DLLs land in `bin/`: `WebRtcVoice.dll`, `WebRtcVoiceServiceModule.dll`,
+   `WebRtcVoiceRegionModule.dll` (and `WebRtcJanusService.dll`, unused with wolfvoice).
+
+**B. Upstream OpenSimulator master since 26 Feb 2026** (`OpenSim/Addons/os-webrtc-janus`
+exists). The module is built in. Do **not** clone a second copy into `addon-modules/` -
+two projects with the same names break the build. Replace the built-in sources with the
+hardened ones instead, then build as usual:
 
 ```bash
-cd opensim/addon-modules
-git clone -b chatsession-p2p-session-id-and-fast-fail https://github.com/wolfsoftwaresystemsltd/os-webrtc-janus.git os-webrtc-janus
-cd ..
+git clone -b chatsession-p2p-session-id-and-fast-fail \
+    https://github.com/intelligentwolf/os-webrtc-janus.git ../os-webrtc-janus-wolf
+for d in Janus WebRtcVoice WebRtcVoiceRegionModule WebRtcVoiceServiceModule; do
+    rm -f OpenSim/Addons/os-webrtc-janus/$d/*.cs
+    cp ../os-webrtc-janus-wolf/$d/*.cs OpenSim/Addons/os-webrtc-janus/$d/
+done
+./runprebuild.sh && ./compile.sh
 ```
 
-Then build. **Which build you have is told by the tree itself:**
+If you keep the built-in module unchanged instead, wolfvoice still gives spatial voice,
+but only while wolfvoice has **no relay key** (the built-in module sends none, so a keyed
+wolfvoice answers every request "not authorised"), there are no private calls or group
+voice, and TCP 9443 is protected by your firewall alone.
 
-**A. Classic tree — `runprebuild.sh` exists at the OpenSim root**
-(opensimulator.org 0.9.2.x / early 0.9.3):
+**C. OpenSim-NGC** (`Addons/os-webrtc-janus`). NGC carries its own, much-extended
+version of the module. Do not copy this one into it; we have not tested NGC's module
+with wolfvoice.
+
+**D. A binary-only distribution** (just `bin/`, no sources): build in a source tree of
+the **exact same** OpenSim version with A or B, then copy the three `WebRtc*.dll` files
+listed above into the distribution's `bin/`, replacing any that are there.
+
+The modules are loaded when OpenSim starts, so restart the region after installing them.
+Nothing is needed on the Robust (grid) server: regions talk to wolfvoice directly.
+
+### 3. Create the keys
+
+On the voice server (`setup.sh` does this on a fresh install; when it upgrades an
+existing one it leaves this to you, so regions without keys keep working until you are ready):
 
 ```bash
-./runprebuild.sh    # also (re)generates compile.sh — it's normal for it to be missing before this
-./compile.sh        # or: dotnet build -c Release OpenSim.sln
+sudo sh -c 'umask 027; openssl rand -hex 32 > /etc/wolfvoice/rpc_key; openssl rand -hex 32 > /etc/wolfvoice/cred_key'
+sudo chgrp wolfvoice /etc/wolfvoice/rpc_key /etc/wolfvoice/cred_key
+sudo systemctl restart wolfvoice
 ```
 
-Prebuild picks the module up automatically and the DLLs land directly in `bin/`.
-
-**B. dotnet-era tree — no `runprebuild.sh`, but `OpenSim.sln` and
-`Directory.Build.props` at the root** (OpenSim-NGC snapshots; "the only .sh in the
-tree is the addon's own updateVersion.sh" means you are here). Prebuild is gone and
-the solution only builds projects registered in it, so register the module's four
-projects once, then build:
+Copy both files to every region host, readable only by the user OpenSim runs as:
 
 ```bash
-dotnet sln OpenSim.sln add \
-    addon-modules/os-webrtc-janus/WebRtcVoice/WebRtcVoice.csproj \
-    addon-modules/os-webrtc-janus/WebRtcVoiceServiceModule/WebRtcVoiceServiceModule.csproj \
-    addon-modules/os-webrtc-janus/WebRtcVoiceRegionModule/WebRtcVoiceRegionModule.csproj \
-    addon-modules/os-webrtc-janus/Janus/WebRtcJanusService.csproj
-dotnet build --configuration Release OpenSim.sln
+sudo install -d -m 0750 -o opensim -g opensim /etc/opensim     # your OpenSim user
+sudo install -m 0400 -o opensim -g opensim rpc_key  /etc/opensim/voice_rpc_key
+sudo install -m 0400 -o opensim -g opensim cred_key /etc/opensim/voice_cred_key
 ```
 
-Build via the solution, not the individual csproj files — the tree's
-`Directory.Build.props` computes output paths from the solution directory. Output
-goes to `build/Release/<AssemblyName>/`, **not** `bin/`; copy the DLLs into the
-`bin/` your regions actually run from:
+Regions re-read these files when they change (within a minute); wolfvoice reads its
+keys when it starts. What each key does is in [docs/SECURITY.md](docs/SECURITY.md).
 
-```bash
-cp build/Release/WebRtcVoice/WebRtcVoice.dll \
-   build/Release/WebRtcVoiceServiceModule/WebRtcVoiceServiceModule.dll \
-   build/Release/WebRtcVoiceRegionModule/WebRtcVoiceRegionModule.dll  /path/to/runtime/bin/
-```
+### 4. Configure each region
 
-**C. Binary-only distribution** (no `OpenSim.sln`, no source directories — just
-`bin/`): you cannot build the addon there. Build it inside a source tree of the
-**exact same OpenSim version** using A or B, then copy the three `WebRtc*.dll`
-files into the distribution's `bin/`. Mismatched versions will fail to load.
-
-Whichever route: you need `WebRtcVoice.dll`, `WebRtcVoiceServiceModule.dll` and
-`WebRtcVoiceRegionModule.dll` in the runtime `bin/` (the also-built
-`WebRtcJanusService.dll` is simply unused when pointing at wolfvoice). The modules
-load at startup — **restart the region** after copying.
-
-### 3. Configure each region
-
-Create **`<region>/bin/config/wolfvoice.ini`** — a copy of
-[`contrib/wolfvoice.ini`](contrib/wolfvoice.ini) — with your server URL:
+Create **`bin/config/wolfvoice.ini`** in each region's OpenSim directory (a copy of
+[`contrib/wolfvoice.ini`](contrib/wolfvoice.ini)). OpenSim reads every `.ini` in
+`bin/config/` after `OpenSim.ini`, as overrides, so a shared `OpenSim.ini` stays
+untouched.
 
 ```ini
 [WebRtcVoice]
     Enabled = true
-
-    ; Point the addon's JSON-RPC connector at wolfvoice, for both spatial
-    ; (region/parcel) and non-spatial (group, IM) voice.
     SpatialVoiceService = WebRtcVoice.dll:WebRtcVoiceServiceConnector
     NonSpatialVoiceService = WebRtcVoice.dll:WebRtcVoiceServiceConnector
-
-    ; Your wolfvoice server. HTTPS, with a certificate .NET will trust.
+    ; The host name on wolfvoice's certificate - not an IP address. The certificate is
+    ; always verified (chain and name), whatever NoVerifyCertChain says.
     WebRtcVoiceServerURI = https://voice.example.org:9443
-
-    ; Logs entire SDP bodies. Handy on one region while diagnosing.
+    RpcKeyFile = /etc/opensim/voice_rpc_key
+    CredKeyFile = /etc/opensim/voice_cred_key
     MessageDetails = false
 
 [VivoxVoice]
-    ; Turn Vivox off wherever WebRTC is on: both modules register the SAME
-    ; capability name and the last registration wins, so leaving both enabled
-    ; is a race rather than a choice.
     enabled = false
 ```
 
-Then **restart the region**.
+`RpcKeyFile` and `CredKeyFile` above are the defaults, so they can be left out if you
+use those paths. Other settings, all optional: `PositionFeed` (default `true`),
+`AcceptLegacyCallCredentials` (default `true`, see [docs/SECURITY.md](docs/SECURITY.md)),
+`StunServers` (STUN servers given to the viewer; default Google's public ones).
+In a simulator that runs several regions, `[WebRtcVoice]` applies to all of them.
 
-Why `bin/config/` rather than `OpenSim.ini`: OpenSim reads every `.ini` in that
-directory *after* `OpenSim.ini` and treats them as overrides, so a shared or templated
-`OpenSim.ini` can be regenerated without clobbering your voice settings. With one
-OpenSim process per region it also scopes the change to that region alone. (In a
-multi-region simulator, `Enabled` is read once per process, so it applies to every
-region in it.)
+Restart the region. When it works, the region log shows:
 
-### 4. Allow voice on the estate and the parcel
+```
+[WEBRTC VOICE SERVICE CONNECTOR]: WebRtcVoiceServiceConnector enabled
+[WEBRTC VOICE SERVICE MODULE]: WebRtcVoiceService enabled
+[REGION WEBRTC VOICE]: avatar positions go to the voice server once a second while anyone here is in voice
+[REGION WEBRTC VOICE]: no ConferenceApiUrl - conference chats and Wolf Chat voice rooms are off (group voice is not affected)
+[REGION WEBRTC VOICE]: enabled
+[WEBRTC VOICE SERVICE MODULE]: Adding WebRtcVoiceService to region <your region>
+```
+
+The `ConferenceApiUrl` line is normal: ad-hoc conferences and Wolf Chat rooms are
+optional Wolf Territories features that need a service of their own. If you also see
+`no voice relay key - private voice calls are off`, the region cannot read
+`RpcKeyFile`.
+
+### 5. Allow voice on the estate and the parcel
 
 Both are required, and this is the most common reason for "nothing happens":
 
@@ -265,17 +251,35 @@ Both are required, and this is the most common reason for "nothing happens":
 - About Land → Sound → **Allow Voice Chat**
 
 With either unset the viewer decides locally that voice is unavailable and never asks
-the region for anything — so **nothing appears in any log**. If you see
-`setting VoiceServerType=webrtc` in the region log and then no provision request,
-this is why.
+the region for anything, so **nothing appears in any log**. The region also refuses
+voice itself on such a parcel (and to avatars banned from it).
 
-### 5. Check it
+### 6. Check it
 
 ```bash
-# from a permitted region host
+# from a region host
 curl https://voice.example.org:9443/
-# {"rooms":0,"service":"wolfvoice","sessions":0}
+# ok
+curl -H "X-Wolfvoice-Key: $(sudo cat /etc/opensim/voice_rpc_key)" https://voice.example.org:9443/
+# {"bridges":0,"npcs":0,"pending":0,"rooms":0,"service":"wolfvoice","sessions":0}
 ```
+
+Then talk in-world: wolfvoice logs each session it opens (`journalctl -u wolfvoice -f`).
+
+### If it does not work
+
+| You see | Cause and fix |
+|---|---|
+| Nothing in either log when someone opens voice | Voice is off on the estate or parcel (step 5), or the viewer is older than Firestorm 7.1.10. |
+| Region log: `[WOLFVOICE HTTP] refused the voice server's TLS certificate` | `WebRtcVoiceServerURI` uses an IP or a name not on the certificate, or the certificate is self-signed or expired. Use the certificate's host name. |
+| wolfvoice log: `refused: wrong or missing relay key` | The region's `RpcKeyFile` differs from wolfvoice's `rpc_key`, is not readable by OpenSim, or the region runs a module without keys (built-in master module, older addon). |
+| Region log: `no voice relay key - private voice calls are off` | The region cannot read `RpcKeyFile`. Spatial voice works only if wolfvoice has no key either. |
+| Text IMs time out ("session initialization is timed out") | The region runs an addon without the `ChatSessionRequest` fix. Install the branch above (the fix is also in upstream OpenSimulator as [opensim/opensim#69](https://github.com/opensim/opensim/pull/69)). |
+| Build: duplicate project names | Two copies of the module: one in `OpenSim/Addons/` and one in `addon-modules/`. Use route B. |
+| `./runprebuild.sh: Permission denied` or `$'\r': command not found` | The 0.9.3.0 source archive; run the prebuild command directly (route A, step 2). |
+| "voice room is full" / channel full | A private call holds 2, a conference 25, a group or Wolf Chat room 64. |
+
+More in [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md).
 
 ## Documentation
 
@@ -283,6 +287,7 @@ curl https://voice.example.org:9443/
 |---|---|
 | [docs/SERVER.md](docs/SERVER.md) | Installing, running and operating the service; TLS; firewall; capacity |
 | [docs/OPENSIM.md](docs/OPENSIM.md) | The addon, region configuration, estate/parcel flags, rolling out to many regions |
+| [docs/SECURITY.md](docs/SECURITY.md) | The relay and credential keys, changing over to two keys, and what the region and wolfvoice enforce |
 | [docs/CLIENT.md](docs/CLIENT.md) | Viewer support, and writing your own client |
 | [docs/PROTOCOL.md](docs/PROTOCOL.md) | The complete wire contract, with citations into the Firestorm and OpenSim sources |
 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Every failure we hit, and how to tell them apart |
@@ -320,18 +325,28 @@ Needs a Rust toolchain and `cmake` (the `opus` crate compiles libopus from sourc
 
 ```bash
 cargo build --release
-cargo test              # 35 tests, no network required
+cargo test              # 75 tests, no network required
 ```
 
-Release binaries for Linux, macOS and Windows are built by GitHub Actions — see
-[.github/workflows/release.yml](.github/workflows/release.yml).
+Release binaries for Linux (x86_64 and aarch64, static musl and glibc) are built by
+GitHub Actions - see [.github/workflows/release.yml](.github/workflows/release.yml),
+which also explains why macOS and Windows are build-from-source only.
 
 ## Testing it without a viewer
 
 ```bash
+# The harnesses present the relay key and sign tickets the way the region does.
+export WOLFVOICE_RPC_KEY="$(sudo cat /etc/wolfvoice/rpc_key)"
+export WOLFVOICE_CRED_KEY="$(sudo cat /etc/wolfvoice/cred_key)"
+
 # Correctness: two synthetic viewers, real SDP, real Opus, real mixing.
 cargo run --release --example two_clients -- https://127.0.0.1:9443
 # -> AUDIO_MIXED=true ROSTER_DELIVERED=true LEAVE_NOTIFIED=true / PASS
+
+# Firestorm's exact behaviour (spatial, calls, group rooms, hardening): 34 checks.
+cargo run --release --example fs_compat -- https://127.0.0.1:9443
+# Multi-party rooms: join order, rejoin, late joiner: 14 checks.
+cargo run --release --example room_e2e -- https://127.0.0.1:9443
 
 # Capacity: N clients, M speaking, reports service CPU.
 cargo run --release --example load_test -- https://127.0.0.1:9443 40 20
@@ -352,16 +367,21 @@ test.
   silently.
 - **Single instance.** If wolfvoice is down, voice is down everywhere it is
   configured. `Restart=always` covers a crash, not a host failure.
-- **Group and IM voice** (`channel_type: multiagent`) exists in the backend, but
-  private-call invitations failed in BloodMoon's field test and a failed call can
-  require Reset Voice to recover local voice. Investigation is ongoing; do not
-  treat private or group calls as validated in this release.
+- **Private calls and group voice** (`channel_type: multiagent`) need the hardened
+  region module, and have had far less exercise than spatial voice.
 
 ## Credits
 
-Built by **Wolf Software Systems Ltd** for the
+**By Shadow Wolf and Lone Wolf, Wolf Territories Grid and IntelligentWolf Ltd**
+(formerly Wolf Software Systems Ltd), for the
 [Wolf Territories Grid](https://wolfterritories.org), and released for the wider
 OpenSimulator community.
+
+Optional Wolf Territories extras are in the code but **off** unless you configure them,
+and need no Wolf service to stay off: story/NPC voices (`WOLFVOICE_NPC_HOSTS`), a
+Discord voice bridge (a bridge key; needs a bridge client that is not part of this
+repository) and, in the region module, ad-hoc conferences and Wolf Chat voice rooms
+(`ConferenceApiUrl`).
 
 wolfvoice stands on **[os-webrtc-janus](https://github.com/Misterblue/os-webrtc-janus)
 by Robert Adams**, which brought WebRTC voice to OpenSimulator and supplies the

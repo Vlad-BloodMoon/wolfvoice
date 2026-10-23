@@ -1,3 +1,21 @@
+/*
+ * WolfVoice - spatial WebRTC voice for OpenSimulator
+ * By Shadow Wolf and Lone Wolf, Wolf Territories Grid and IntelligentWolf Ltd
+ * Copyright 2026 IntelligentWolf Ltd
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 //! Linden Lab WebRTC voice wire protocol — the parts that cross our boundary.
 //!
 //! Two separate protocols live here:
@@ -52,6 +70,10 @@ pub struct RpcParams {
     /// Region (scene) UUID.
     #[serde(default)]
     pub scene: String,
+    /// The region relay's shared key (WOLFVOICE_RPC_KEY). Without it anyone who could reach
+    /// the port could claim any userID and scene (security scan H5).
+    #[serde(default)]
+    pub key: String,
 }
 
 /// Build a success reply.
@@ -114,6 +136,16 @@ pub struct ProvisionRequest {
     pub channel_type: Option<ChannelType>,
     pub parcel_local_id: i32,
     pub channel: Option<String>,
+    /// The channel credentials the viewer was given with the channel
+    /// (llvoicewebrtc.cpp LLVoiceWebRTCAdHocConnection::requestVoiceConnection:
+    /// `body["credentials"] = mCredentials`). For a private call these are the region's
+    /// signature over channel + avatar (call_credentials), checked before the room opens.
+    pub credentials: Option<String>,
+    /// Wolf extension: move this EXISTING session (`viewer_session`) to the room of
+    /// the region the request arrived through, keeping its peer connection. Sent only
+    /// by Wolf viewers, on a crossing, teleport or parcel-channel change; anything
+    /// else gets the stock offer/answer behaviour.
+    pub wolf_move: bool,
 }
 
 /// Firestorm sends `voice_server_type` on every voice call and the region module
@@ -169,6 +201,14 @@ impl ProvisionRequest {
             .map(str::to_owned)
             .filter(|s| !s.is_empty());
 
+        let credentials = v
+            .get("credentials")
+            .and_then(Value::as_str)
+            .map(str::to_owned)
+            .filter(|s| !s.is_empty());
+
+        let wolf_move = v.get("wolf_move").and_then(Value::as_bool).unwrap_or(false);
+
         Ok(ProvisionRequest {
             logout,
             viewer_session,
@@ -176,6 +216,8 @@ impl ProvisionRequest {
             channel_type,
             parcel_local_id,
             channel,
+            credentials,
+            wolf_move,
         })
     }
 }
