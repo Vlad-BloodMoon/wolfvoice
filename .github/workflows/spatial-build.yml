@@ -18,7 +18,7 @@ jobs:
       - name: Install musl and compatible CMake
         run: |
           sudo apt-get update
-          sudo apt-get install -y musl-tools musl-dev
+          sudo apt-get install -y musl-tools musl-dev qemu-user openssl curl
           python3 -m venv "$RUNNER_TEMP/voice-cmake"
           "$RUNNER_TEMP/voice-cmake/bin/pip" install cmake==3.31.6
           echo "$RUNNER_TEMP/voice-cmake/bin" >> "$GITHUB_PATH"
@@ -26,8 +26,48 @@ jobs:
         env:
           CC_x86_64_unknown_linux_musl: musl-gcc
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
-          RUSTFLAGS: "-C link-arg=-lm -C link-arg=-lc"
+          CFLAGS_x86_64_unknown_linux_musl: "-march=x86-64 -mtune=generic -mno-avx -mno-avx2 -mno-sse2avx"
+          CXXFLAGS_x86_64_unknown_linux_musl: "-march=x86-64 -mtune=generic -mno-avx -mno-avx2 -mno-sse2avx"
+          RUSTFLAGS: "-C target-cpu=x86-64 -C link-arg=-lm -C link-arg=-lc"
         run: cargo build --release --locked --target x86_64-unknown-linux-musl
+      - name: Verify TLS startup and RPC on a CPU without AVX
+        run: |
+          set -eu
+          sudo mkdir -p /etc/wolfvoice/tls
+          sudo openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+            -subj /CN=localhost \
+            -keyout /etc/wolfvoice/tls/privkey.pem \
+            -out /etc/wolfvoice/tls/fullchain.pem
+          sudo chmod 644 /etc/wolfvoice/tls/privkey.pem
+          WOLFVOICE_PUBLIC_IP=127.0.0.1 WOLFVOICE_BIND=127.0.0.1:19443 \
+            qemu-x86_64 -cpu qemu64 target/x86_64-unknown-linux-musl/release/wolfvoice > smoke.log 2>&1 &
+          smoke_pid=$!
+          trap 'kill "$smoke_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 60); do
+            if ! kill -0 "$smoke_pid" 2>/dev/null; then
+              cat smoke.log
+              echo "Server exited on the CPU without AVX"
+              exit 1
+            fi
+            if curl -ksS --fail --max-time 2 https://127.0.0.1:19443/ \
+              -H 'Content-Type: application/json' \
+              -d '{"jsonrpc":"2.0","id":1,"method":"compatibility_probe","params":{}}' > smoke-response.json; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          cat smoke.log
+          test "$ready" = 1
+          python3 - <<'PY'
+          import json
+          with open("smoke-response.json") as stream:
+              response = json.load(stream)
+          assert response["id"] == 1, response
+          assert "unknown method" in str(response), response
+          print("TLS handshake and JSON-RPC passed on qemu64 without AVX")
+          PY
       - name: Package test binary without installer
         run: |
           set -eu
@@ -40,6 +80,6 @@ jobs:
           sha256sum -c SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
-          name: wolfvoice-spatial-test-linux-x86_64
+          name: wolfvoice-spatial-test-compatible-linux-x86_64
           path: package/
           if-no-files-found: error
