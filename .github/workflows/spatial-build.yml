@@ -1,0 +1,45 @@
+name: Build spatial voice test binary
+on:
+  push:
+    branches: ["fix/spatial-listener-axes"]
+    paths: ["src/**", "Cargo.*", ".github/workflows/spatial-build.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+      - name: Install musl and compatible CMake
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools musl-dev
+          python3 -m venv "$RUNNER_TEMP/voice-cmake"
+          "$RUNNER_TEMP/voice-cmake/bin/pip" install cmake==3.31.6
+          echo "$RUNNER_TEMP/voice-cmake/bin" >> "$GITHUB_PATH"
+      - name: Build static Linux x86_64 binary
+        env:
+          CC_x86_64_unknown_linux_musl: musl-gcc
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
+          RUSTFLAGS: "-C link-arg=-lm -C link-arg=-lc"
+        run: cargo build --release --locked --target x86_64-unknown-linux-musl
+      - name: Package test binary without installer
+        run: |
+          set -eu
+          mkdir package
+          cp target/x86_64-unknown-linux-musl/release/wolfvoice package/wolfvoice
+          cp docs/SPATIAL_INVESTIGATION.md package/README.md
+          git rev-parse HEAD > package/COMMIT.txt
+          cd package
+          sha256sum wolfvoice > SHA256SUMS
+          sha256sum -c SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wolfvoice-spatial-test-linux-x86_64
+          path: package/
+          if-no-files-found: error
