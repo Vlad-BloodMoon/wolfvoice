@@ -20,9 +20,10 @@ jobs:
       - name: Verify validated build provenance and download
         run: |
           set -euo pipefail
-          test "$(gh api repos/$GH_REPO/actions/runs/39933496255 --jq .head_sha)" = 'd2d2670181b12354d51d83611ae5dbf36b822586'
-          test "$(gh api repos/$GH_REPO/actions/runs/39933496255 --jq .conclusion)" = success
-          gh run download 39933496255 --name 'wolfvoice-0.2.0-integration-linux-x86_64' --dir validated
+          test "$(gh api repos/$GH_REPO/actions/runs/40700492483 --jq .head_sha)" = 'aa14b9c7bd37f67382b8d59945bda26d86e5975d'
+          test "$(gh api repos/$GH_REPO/actions/runs/40700492483 --jq .conclusion)" = success
+          gh run download 40700492483 --name 'wolfvoice-spatial-test-compatible-linux-x86_64' --dir validated
+          test "$(cat validated/COMMIT.txt)" = 'aa14b9c7bd37f67382b8d59945bda26d86e5975d'
           cd validated
           sha256sum -c SHA256SUMS
       - name: Package public files without grid credentials
@@ -30,8 +31,9 @@ jobs:
           set -euo pipefail
           mkdir dist
           cp validated/wolfvoice dist/wolfvoice-x86_64-linux-musl
-          cp "docs/RELEASE-v0.2.0-bloodmoon.1.md" dist/README.md
-          printf '%s\n' 'd2d2670181b12354d51d83611ae5dbf36b822586' > dist/BUILD_COMMIT.txt
+          cp docs/SPATIAL_INVESTIGATION.md dist/SPATIAL_FIX.md
+          cp "docs/RELEASE-v0.2.0-bloodmoon.2.md" dist/README.md
+          printf '%s\n' 'aa14b9c7bd37f67382b8d59945bda26d86e5975d' > dist/BUILD_COMMIT.txt
           cd dist
           sha256sum wolfvoice-x86_64-linux-musl > wolfvoice-x86_64-linux-musl.sha256
           sha256sum -c wolfvoice-x86_64-linux-musl.sha256
@@ -39,4 +41,4 @@ jobs:
       - name: Publish normal release
         run: |
           set -euo pipefail
-          gh release create 'v0.2.0-bloodmoon.1' dist/* --target "$GITHUB_SHA" --title 'WolfVoice v0.2.0-bloodmoon.1 - private IM voice' --notes-file 'docs/RELEASE-v0.2.0-bloodmoon.1.md' --latest
+          gh release create 'v0.2.0-bloodmoon.2' dist/* --target "$GITHUB_SHA" --title 'WolfVoice v0.2.0-bloodmoon.2 - spatial voice correction' --notes-file 'docs/RELEASE-v0.2.0-bloodmoon.2.md' --latest
