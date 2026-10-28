@@ -2,6 +2,19 @@
 
 By Shadow Wolf and Lone Wolf, Wolf Territories Grid and IntelligentWolf Ltd.
 
+## v0.2.0-bloodmoon.2 - 2026-10-28: spatial listener axes
+
+- Use listener-local -Y for right instead of +X (forward).
+- Normalize quantized viewer rotations; include elevation in pan direction length.
+- Preserve distance attenuation, per-user gain/mute and private-call credentials.
+- Publish the exact field-tested static Linux x86-64 artifact, compiled for baseline
+  CPUs and tested with TLS/RPC under QEMU without AVX.
+- Operator reported successful in-world results on BloodMoon.
+- Full technical explanation: [spatial correction](docs/SPATIAL_INVESTIGATION.md).
+
+For an existing server, replace only the binary and restart the voice service.
+No new OpenSim DLLs, settings, keys or ports are required for this patch.
+
 ## 0.2.0 - 2026-10-23: security hardening
 
 Written for operators of other OpenSimulator grids. Use 0.2.0 together with the
@@ -14,12 +27,12 @@ the README says how to build it into each kind of OpenSim tree.
 
 1. Build the hardened region module into your regions (README step 2). It works with
    wolfvoice 0.1.x too, so regions can go first.
-2. Upgrade wolfvoice (re-running `setup.sh` replaces the binary and keeps everything
-   else; on an upgrade it does not create keys, so nothing changes for your regions yet).
+2. Upgrade wolfvoice by backing up and replacing only the binary; retain the existing
+   service, certificates, keys and firewall configuration. See docs/INSTALLATION.md.
 3. Create the two keys (README step 3), copy them to every region host, set
    `RpcKeyFile` / `CredKeyFile` in `bin/config/wolfvoice.ini` (or use the default
-   paths), restart wolfvoice, then the regions. On a fresh install `setup.sh` creates
-   the keys for you.
+   paths), restart wolfvoice, then the regions. This fork's installer does not create
+   keys; follow the manual, non-overwriting procedure in docs/INSTALLATION.md.
 
 If some regions must stay on a module without keys (an older addon, or OpenSim master's
 built-in copy), run wolfvoice **without** a relay key for now: those regions send none,

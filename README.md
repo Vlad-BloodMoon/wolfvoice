@@ -1,9 +1,10 @@
 # wolfvoice
 
-## Current fork release: v0.2.0-bloodmoon.1
+## Current fork release: v0.2.0-bloodmoon.2
 
-[Download the release](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.1).
-The Linux x86_64 binary is based on upstream 0.2.0 and has been deployed on the grid.
+[Download the release](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.2).
+The Linux x86_64 binary retains upstream 0.2.0 functionality and corrects the spatial listener axes and quaternion normalization. The operator reported successful in-world results on 28 October 2026. The published binary also passes a TLS/RPC startup test on an emulated CPU without AVX.
+See [the spatial fix and upstream review notes](docs/SPATIAL_INVESTIGATION.md).
 Local voice, participant dots, individual volume and private IM voice calls were confirmed by the operator. All hosted simulators were updated and restarted.
 Group voice is implemented upstream but has not been confirmed in these operator tests. Ad-hoc conferences need a separate external service and are not enabled by this release.
 
@@ -75,7 +76,7 @@ Linden Lab's WebRTC voice puts spatialisation, per-user gain and mute on the
 **server**: the viewer sends its position, gain and mute requests *up* a data channel
 and receives one already-mixed audio stream plus a participant roster *down* it.
 
-wolfvoice therefore computes **a distinct mix for every listener**. If A is east of B,
+wolfvoice therefore computes **a distinct mix for every listener**. For example, if both listeners face east and A is north of B,
 A hears B on their right while B simultaneously hears A on their left — which one
 shared room mix cannot express, however it is panned.
 
@@ -96,10 +97,10 @@ positional audio.
 
 ### 1. Update the voice server
 
-Download `wolfvoice-x86_64-linux-musl` and its `.sha256` file from [this fork's release](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.1).
+Download `wolfvoice-x86_64-linux-musl` and its `.sha256` file from [this fork's release](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.2).
 Verify the checksum, back up the current binary and replace it during a planned voice interruption. Keep the existing systemd unit, certificates, account, IP restrictions and configuration. No installer is needed for an existing installation.
 
-The retained `setup.sh` now points to this fork's v0.2.0-bloodmoon.1 binary.
+The retained `setup.sh` now points to this fork's v0.2.0-bloodmoon.2 binary.
 It is a fresh-install helper, not the rolling-upgrade procedure. It does not create keys. For a new server, follow [installation and keys](docs/INSTALLATION.md); existing deployments should follow [deployment notes](docs/INTEGRATION.md).
 
 ### 2. Build the region module into OpenSim
