@@ -1,5 +1,9 @@
 # Installation and signing keys
 
+**[Guide français pas à pas](INSTALLATION_FR.md) · [Téléchargements compilés](TELECHARGEMENTS_FR.md)**
+
+Precompiled OpenSim 0.9.3.1 DLL/PDB package: [download ZIP](https://github.com/Vlad-BloodMoon/opensim/releases/download/v0.9.3.1-webrtc.1/WebRTC_Modules_0.9.3.1.zip). No compilation is needed for this matching version; configure your own voice server and keys.
+
 For this fork, setup.sh installs the server but does NOT create signing keys.
 Create them manually as described below. Never paste a key into a public issue,
 README, screenshot or download archive.

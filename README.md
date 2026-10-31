@@ -1,5 +1,16 @@
 # wolfvoice
 
+## Installation facile / ready-to-use downloads
+
+**Français : [téléchargements compilés et choix des fichiers](docs/TELECHARGEMENTS_FR.md) · [installation pas à pas pour votre propre grille](docs/INSTALLATION_FR.md).**
+
+| Ready-to-use component | Download |
+| --- | --- |
+| Voice server, Linux x86-64, spatial axes fixed | [WolfVoice v0.2.0-bloodmoon.2](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.2) |
+| Region DLLs/PDBs, OpenSim 0.9.3.1 / .NET 8 | [WebRTC_Modules_0.9.3.1.zip](https://github.com/Vlad-BloodMoon/opensim/releases/download/v0.9.3.1-webrtc.1/WebRTC_Modules_0.9.3.1.zip) |
+
+No compilation is required for these downloads. The server and simulator modules are separate components. Other grids must configure their own hostname and keys; no BloodMoon key is included. Existing region modules do not need replacing just for the server-side axis fix.
+
 ## Current fork release: v0.2.0-bloodmoon.2
 
 [Download the release](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.2).
@@ -103,7 +114,9 @@ Verify the checksum, back up the current binary and replace it during a planned 
 The retained `setup.sh` now points to this fork's v0.2.0-bloodmoon.2 binary.
 It is a fresh-install helper, not the rolling-upgrade procedure. It does not create keys. For a new server, follow [installation and keys](docs/INSTALLATION.md); existing deployments should follow [deployment notes](docs/INTEGRATION.md).
 
-### 2. Build the region module into OpenSim
+### 2. Install the region modules (precompiled or from source)
+
+**OpenSim 0.9.3.1 / .NET 8:** the matching three DLL/PDB pairs are already compiled in [WebRTC_Modules_0.9.3.1.zip](https://github.com/Vlad-BloodMoon/opensim/releases/download/v0.9.3.1-webrtc.1/WebRTC_Modules_0.9.3.1.zip). Stop the simulator, back up the matching files and dedicated voice INI, replace the six files in `bin/`, configure your server URL and keys, then restart from `bin/`. Keep `WebRtcJanusService.dll` if present. See [the file locations and French steps](docs/INSTALLATION_FR.md#6-installer-les-dll-sur-chaque-simulateur). For other versions/distributions, check compatibility and use the source-build instructions below where appropriate.
 
 wolfvoice needs the region half of WebRTC voice: the **os-webrtc-janus** region module.
 Use the hardened version on branch `chatsession-p2p-session-id-and-fast-fail` of

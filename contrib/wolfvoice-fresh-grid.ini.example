@@ -1,0 +1,15 @@
+; Nouvelle grille : adapter le nom DNS et installer VOS deux cles dans bin/.
+; Guide : https://github.com/Vlad-BloodMoon/wolfvoice/blob/main/docs/INSTALLATION_FR.md
+; Demarrer OpenSim depuis bin/. Ne jamais publier les fichiers de cles.
+[WebRtcVoice]
+    Enabled = true
+    SpatialVoiceService = WebRtcVoice.dll:WebRtcVoiceServiceConnector
+    NonSpatialVoiceService = WebRtcVoice.dll:WebRtcVoiceServiceConnector
+    WebRtcVoiceServerURI = https://voice.votre-grille.fr:9443
+    RpcKeyFile = voice_rpc_key
+    CredKeyFile = voice_cred_key
+    MessageDetails = false
+    StunServers = stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302
+
+[VivoxVoice]
+    enabled = false
