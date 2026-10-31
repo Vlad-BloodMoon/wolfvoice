@@ -6,7 +6,9 @@ Aucune compilation n'est nécessaire pour les fichiers ci-dessous.
 ## Vous installez votre propre serveur vocal pour votre grille ?
 
 Commencez par le **[guide d'installation pas à pas](INSTALLATION_FR.md)**.
-Il explique le serveur, les certificats, les clés et les simulateurs.
+Un seul parcours : serveur Linux, deux clés, port 9443 avec authentification RPC,
+puis DLL et deux fichiers de clés dans le dossier bin de chaque simulateur.
+Il ne nécessite pas de liste d'IP autorisées.
 
 | À télécharger | Usage |
 | --- | --- |
@@ -29,7 +31,7 @@ n'est à installer sur l'ordinateur des résidents : utiliser un viewer compatib
 ## Vous raccordez seulement un simulateur à une grille équipée ?
 
 Demandez à l'administrateur de cette grille son URL vocale, sa configuration,
-les clés nécessaires et l'autorisation de votre adresse IP.
+les clés nécessaires et ses conditions d'accès au serveur.
 Vous n'avez pas besoin d'installer votre propre serveur WolfVoice.
 Les clés d'une autre grille ne doivent jamais être réutilisées pour votre serveur.
 
