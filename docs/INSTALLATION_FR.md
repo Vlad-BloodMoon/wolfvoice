@@ -9,12 +9,18 @@ Il installe **v0.2.0-bloodmoon.2**, avec le correctif des axes, sans compilation
 Si la voix fonctionne déjà, suivre plutôt [la mise à jour en fin de page](#mise-à-jour-dun-serveur-déjà-installé).
 Ne pas lancer l'installateur pour mettre à jour un service personnalisé.
 
-## 1. Préparer les trois informations
+## Le fonctionnement choisi
+
+Ce guide suit un seul mode : **deux clés partagées avec les simulateurs**, sans
+liste d'IP autorisées. Le serveur reçoit les requêtes sur TCP 9443, sous TLS,
+et refuse les requêtes vocales sans la bonne clé RPC. Le port est ouvert à
+l'étape 5, après activation et vérification de cette authentification.
+
+## 1. Préparer les deux informations
 
 Noter :
 - l'adresse IP publique du serveur vocal ;
-- un nom DNS, par exemple `voice.votre-grille.fr`, pointant vers cette IP ;
-- les IP publiques de sortie des machines qui hébergent les simulateurs.
+- un nom DNS, par exemple `voice.votre-grille.fr`, pointant vers cette IP.
 
 Le nom et les IP sont ceux de **votre grille**, pas ceux de BloodMoon.
 Le parcours simple ci-dessous suppose le port TCP 80 disponible pour Certbot.
@@ -25,7 +31,8 @@ Ne pas arrêter votre site web pour suivre ce guide.
 ## 2. Préparer le réseau
 
 Sur le pare-feu du serveur, et celui de l'hébergeur s'il existe :
-- **TCP 9443** : autoriser uniquement les IP publiques de vos simulateurs ;
+- **TCP 9443** : le garder fermé depuis Internet pour le moment ; il sera ouvert
+  à tous les simulateurs à l'étape 5, après vérification de la clé RPC ;
 - **UDP 40000 à 40999** : autoriser les connexions des viewers ;
 - **TCP 80** : doit être accessible pour l'émission et le renouvellement du
   certificat Let's Encrypt dans ce parcours.
@@ -33,18 +40,16 @@ Sur le pare-feu du serveur, et celui de l'hébergeur s'il existe :
 Si le serveur est derrière un routeur, rediriger ces ports vers lui.
 Ne pas modifier les ports ROBUST ou OpenSim pour installer la voix.
 
-Exemples pour un pare-feu UFW **déjà actif**, en remplaçant
-`IP_PUBLIQUE_DU_SIMULATEUR` par une vraie IP :
+Exemple pour un pare-feu UFW **déjà actif** :
 
 ```bash
-sudo ufw allow proto tcp from IP_PUBLIQUE_DU_SIMULATEUR to any port 9443
 sudo ufw allow 40000:40999/udp
 sudo ufw allow 80/tcp
 sudo ufw status
 ```
 
-Répéter la première règle pour chaque machine de simulateurs.
-Vérifier qu'aucune autre règle n'ouvre déjà 9443 à tout Internet.
+Vérifier que 9443 reste fermé à ce stade, y compris sur le pare-feu de
+l'hébergeur. Si une ancienne règle l'ouvre déjà, la corriger avant de continuer.
 Ne pas activer ou réinitialiser UFW à distance sans préserver votre accès SSH.
 
 ## 3. Installer le serveur vocal
@@ -56,7 +61,7 @@ complet pour inclure les scripts de renouvellement TLS. On ne compile rien.
 (
 set -e
 sudo apt-get update
-sudo apt-get install -y curl ca-certificates openssl
+sudo apt-get install -y curl ca-certificates openssl python3
 mkdir -p "$HOME/wolfvoice-installation"
 cd "$HOME/wolfvoice-installation"
 curl -fL https://github.com/Vlad-BloodMoon/wolfvoice/archive/refs/tags/v0.2.0-bloodmoon.2.tar.gz   -o wolfvoice-installation.tar.gz
@@ -74,7 +79,9 @@ L'installateur demande :
 
 Il télécharge et vérifie le binaire compilé, crée le compte système
 `wolfvoice`, prépare le certificat et démarre `wolfvoice.service`.
-Il ne crée pas les clés et ne configure pas le pare-feu.
+Il ne crée pas les clés et ne configure pas le pare-feu initial.
+Son récapitulatif contient des conseils génériques sur une liste d'IP : pour
+le mode à deux clés retenu ici, appliquer les étapes 4 et 5 ci-dessous.
 
 ## 4. Créer les deux clés de votre nouvelle grille
 
@@ -126,11 +133,10 @@ Seul le compte qui exécute OpenSim doit pouvoir les lire.
 Ne pas les publier dans un ZIP public, GitHub ou une capture d'écran.
 Supprimer les copies temporaires de transfert après vérification.
 
-Si vous faites une migration progressive avec d'anciens modules, ne pas activer
-la clé RPC avant leur mise à jour : voir [le guide de migration](INSTALLATION.md).
-Cette réserve ne concerne pas une nouvelle installation entièrement équipée.
+Chaque simulateur doit utiliser les DLL de l'étape 6 et les deux clés.
+Ce guide ne modifie pas une installation existante fonctionnant avec une seule clé.
 
-## 5. Vérifier le serveur
+## 5. Activer l'authentification, puis ouvrir le port 9443
 
 ```bash
 sudo systemctl restart wolfvoice.service
@@ -142,6 +148,40 @@ sudo journalctl -u wolfvoice.service -n 25 --no-pager
 Attendre un service `active (running)` et une ligne
 `wolfvoice listening on 0.0.0.0:9443 (TLS)`.
 Le message indiquant que le pont Discord est désactivé est normal.
+Si les logs indiquent `no relay key`, **ne pas ouvrir 9443** : vérifier que
+`/etc/wolfvoice/rpc_key` existe, n'est pas vide et est lisible par le groupe
+`wolfvoice`, puis redémarrer le service.
+
+Vérifier ensuite qu'une requête sans clé est refusée. La commande demande votre
+nom DNS vocal et contacte le serveur localement avec son certificat TLS normal :
+
+```bash
+(
+set -euo pipefail
+read -r -p "Nom DNS du serveur vocal : " voice_dns
+curl --silent --show-error --fail \
+  --resolve "$voice_dns:9443:127.0.0.1" \
+  "https://$voice_dns:9443/" \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"provision_voice_account_request","params":{}}' \
+  | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r.get("error")=="not authorised", r; print("OK : requete sans cle RPC refusee")'
+)
+```
+
+Le résultat doit être `OK : requete sans cle RPC refusee`. Ce refus confirme
+l'authentification ; le démarrage du service seul ne suffit pas.
+
+Après ce résultat, ouvrir **TCP 9443** sur le pare-feu du serveur et celui de
+l'hébergeur, sans liste d'IP. Pour UFW déjà actif :
+
+```bash
+sudo ufw allow 9443/tcp
+sudo ufw status
+```
+
+Ne pas ouvrir d'autres ports de signalisation. Les requêtes vocales restent
+protégées par la clé RPC ; la connexion seule et la page de santé publique ne
+constituent pas une autorisation d'utiliser le service.
 
 ## 6. Installer les DLL sur chaque simulateur
 
@@ -231,7 +271,7 @@ Ne pas confondre ces fonctionnalités avec un appel privé entre deux avatars.
 
 | Symptôme | Vérification |
 | --- | --- |
-| Aucun accès au serveur | IP publique du simulateur autorisée sur 9443, DNS et TLS |
+| Aucun accès au serveur | TCP 9443 ouvert après l'étape 5 sur les pare-feu serveur/hébergeur, DNS et TLS |
 | Connexion vocale sans son | IP publique annoncée, UDP 40000–40999 et éventuelle redirection NAT |
 | Appel refusé / mauvaise clé RPC | Mêmes fichiers de clés, chemins corrects et compte OpenSim autorisé à les lire |
 | Voix locale mais pas d'appel privé | Les deux simulateurs à jour et même clé d'appels |
