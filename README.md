@@ -49,7 +49,7 @@ OpenSim region  +  os-webrtc-janus addon   ← REQUIRED
 
 **os-webrtc-janus is a hard requirement.** It supplies `WebRtcVoice.dll` and the
 region-side capability handlers that everything here depends on; without it there is
-nothing for a viewer to talk to. See [step 2](#2-build-the-region-module-into-opensim) for building it.
+nothing for a viewer to talk to. See [step 2](#2-install-the-region-modules-precompiled-or-from-source) for building it.
 
 **New in 0.2.0** (see [CHANGELOG.md](CHANGELOG.md)): a relay key and a separate credential
 key, private calls and group voice with signed tickets, positions held to where the
