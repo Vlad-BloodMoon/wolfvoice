@@ -4,7 +4,7 @@
 
 Precompiled OpenSim 0.9.3.1 DLL/PDB package: [download ZIP](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.3/WebRTC_Modules_0.9.3.1-webrtc.2.zip). No compilation is needed for this matching version; configure your own voice server and keys.
 
-For this fork, setup.sh installs the server but does NOT create signing keys.
+For this fork, the current setup.sh on main installs the v0.2.0-bloodmoon.3 server but does NOT create signing keys. Historical source tags retain their original installer; use the current script linked below.
 Create them manually as described below. Never paste a key into a public issue,
 README, screenshot or download archive.
 
