@@ -185,12 +185,14 @@ constituent pas une autorisation d'utiliser le service.
 
 ## 6. Installer les DLL sur chaque simulateur
 
+Pour mettre à jour des modules compatibles déjà installés, remplacer uniquement `WebRtcVoiceRegionModule.dll` et son `.pdb`, conserver les autres DLL, la configuration et les clés, puis redémarrer. Les étapes ci-dessous installent les trois paires pour une nouvelle installation.
+
 Télécharger :
-- [WebRTC_Modules_0.9.3.1.zip](https://github.com/Vlad-BloodMoon/opensim/releases/download/v0.9.3.1-webrtc.1/WebRTC_Modules_0.9.3.1.zip)
-- [sa somme de contrôle](https://github.com/Vlad-BloodMoon/opensim/releases/download/v0.9.3.1-webrtc.1/WebRTC_Modules_0.9.3.1.zip.sha256)
+- [webrtc-group-recall-fix.zip](https://github.com/Vlad-BloodMoon/opensim/releases/download/v0.9.3.1-webrtc.2/webrtc-group-recall-fix.zip)
+- [sa somme de contrôle](https://github.com/Vlad-BloodMoon/opensim/releases/download/v0.9.3.1-webrtc.2/SHA256SUMS)
 
 Sous Linux, depuis le dossier contenant ces deux téléchargements :
-`sha256sum -c WebRTC_Modules_0.9.3.1.zip.sha256`.
+`sha256sum -c SHA256SUMS`.
 Le résultat doit être `OK`. Le ZIP contient aussi les sommes des modules.
 
 1. Arrêter le simulateur et sauvegarder les fichiers à remplacer ainsi que sa
@@ -263,8 +265,7 @@ Redémarrer le simulateur. Avec un viewer compatible WebRTC :
 6. Pour tester entre deux simulateurs, équiper les deux des mêmes modules et clés.
 
 Les visiteurs Hypergrid ont été testés sur BloodMoon avec succès.
-La voix de groupe n'a pas été validée dans ces essais ; les conférences ad hoc
-ne sont pas fournies par ce pack seul.
+Les appels vocaux des groupes OpenSim existants et leurs invitations entre simulateurs ont été validés avec les modules v0.9.3.1-webrtc.2. Tester aussi un appel de groupe puis quitter et rejoindre à nouveau la session. Les conférences ad hoc ne sont pas fournies par ce pack seul.
 Ne pas confondre ces fonctionnalités avec un appel privé entre deux avatars.
 
 ## En cas de problème
@@ -295,3 +296,10 @@ Le correctif des axes ne demande pas de nouvelles DLL si les modules
 v0.9.3.1-webrtc.1 sont déjà installés.
 
 Développé à partir de WolfVoice, par Shadow Wolf, Lone Wolf et les contributeurs.
+
+
+### Limites connues de l’interface Firestorm
+
+Le message français « Pas de réponse » après un raccrochage normal de groupe provient du texte `nearby` mal traduit dans Firestorm ; il ne signifie pas que les membres doivent tous répondre. Un signalement a été transmis par l’opérateur. Aucun correctif de traduction Firestorm n’est inclus dans les DLL.
+Le bouton Raccrocher de la fenêtre IM peut rester grisé chez certains invités : utiliser le bouton rouge dans la liste des participants, accessible via le casque. La cause de ce second problème n’est pas confirmée.
+Le ZIP conserve son README de préversion d’origine ; les présentes instructions et les notes de la release le remplacent pour le statut et les limites connues.
