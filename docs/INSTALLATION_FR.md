@@ -4,7 +4,7 @@
 
 Ce parcours concerne **une nouvelle installation** sur un serveur Ubuntu 24.04
 Linux x86-64 avec systemd, et des simulateurs OpenSim 0.9.3.1 / .NET 8.
-Il installe **v0.2.0-bloodmoon.2**, avec le correctif des axes, sans compilation.
+Il installe **v0.2.0-bloodmoon.3**, avec le correctif des axes, sans compilation.
 
 Si la voix fonctionne déjà, suivre plutôt [la mise à jour en fin de page](#mise-à-jour-dun-serveur-déjà-installé).
 Ne pas lancer l'installateur pour mettre à jour un service personnalisé.
@@ -55,7 +55,7 @@ Ne pas activer ou réinitialiser UFW à distance sans préserver votre accès SS
 ## 3. Installer le serveur vocal
 
 **Sur la machine du serveur vocal**, télécharger le dossier d'installation
-complet pour inclure les scripts de renouvellement TLS. On ne compile rien.
+complet pour inclure les scripts de renouvellement TLS. Le téléchargement ci-dessous fige la révision de l’installateur qui sélectionne la release v0.2.0-bloodmoon.3 ; il ne compile rien.
 
 ```bash
 (
@@ -64,9 +64,9 @@ sudo apt-get update
 sudo apt-get install -y curl ca-certificates openssl python3
 mkdir -p "$HOME/wolfvoice-installation"
 cd "$HOME/wolfvoice-installation"
-curl -fL https://github.com/Vlad-BloodMoon/wolfvoice/archive/refs/tags/v0.2.0-bloodmoon.2.tar.gz   -o wolfvoice-installation.tar.gz
+curl -fL https://github.com/Vlad-BloodMoon/wolfvoice/archive/6fcf39e5fe9a68dfbf5cf70a111dbac68e91b902.tar.gz   -o wolfvoice-installation.tar.gz
 tar -xzf wolfvoice-installation.tar.gz
-cd wolfvoice-0.2.0-bloodmoon.2
+cd wolfvoice-6fcf39e5fe9a68dfbf5cf70a111dbac68e91b902
 less setup.sh
 sudo bash setup.sh
 )
