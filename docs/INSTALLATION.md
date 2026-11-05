@@ -2,7 +2,7 @@
 
 **[Guide français pas à pas](INSTALLATION_FR.md) · [Téléchargements compilés](TELECHARGEMENTS_FR.md)**
 
-Precompiled OpenSim 0.9.3.1 DLL/PDB package: [download ZIP](https://github.com/Vlad-BloodMoon/opensim/releases/download/v0.9.3.1-webrtc.2/webrtc-group-recall-fix.zip). No compilation is needed for this matching version; configure your own voice server and keys.
+Precompiled OpenSim 0.9.3.1 DLL/PDB package: [download ZIP](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.3/WebRTC_Modules_0.9.3.1-webrtc.2.zip). No compilation is needed for this matching version; configure your own voice server and keys.
 
 For this fork, setup.sh installs the server but does NOT create signing keys.
 Create them manually as described below. Never paste a key into a public issue,
@@ -162,4 +162,4 @@ external service.
 
 The French “No Answer” message after a normal group hang-up is an incorrect translation of Firestorm's `nearby` string; it does not mean that all members must answer. It has been reported by the operator. No viewer translation fix is included in the module package.
 Some invited participants may have a disabled hang-up button in their group IM window; use the red hang-up button in the headset/voice participants panel. The cause of this separate issue is not confirmed.
-The unchanged ZIP contains its original preview README; these instructions and the release notes supersede it for release status and known issues.
+This repackaged ZIP contains the unchanged validated DLL/PDB files and updated documentation; no recompilation or credential is included.
