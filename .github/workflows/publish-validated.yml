@@ -32,7 +32,7 @@ jobs:
           mkdir dist
           cp validated/wolfvoice dist/wolfvoice-x86_64-linux-musl
           cp docs/SPATIAL_INVESTIGATION.md dist/SPATIAL_FIX.md
-          cp "docs/RELEASE-v0.2.0-bloodmoon.2.md" dist/README.md
+          cp "docs/RELEASE-v0.2.0-bloodmoon.3.md" dist/README.md
           printf '%s\n' 'aa14b9c7bd37f67382b8d59945bda26d86e5975d' > dist/BUILD_COMMIT.txt
           cd dist
           sha256sum wolfvoice-x86_64-linux-musl > wolfvoice-x86_64-linux-musl.sha256
@@ -41,4 +41,8 @@ jobs:
       - name: Publish normal release
         run: |
           set -euo pipefail
-          gh release create 'v0.2.0-bloodmoon.2' dist/* --target "$GITHUB_SHA" --title 'WolfVoice v0.2.0-bloodmoon.2 - spatial voice correction' --notes-file 'docs/RELEASE-v0.2.0-bloodmoon.2.md' --latest
+          if gh release view 'v0.2.0-bloodmoon.3' >/dev/null 2>&1; then
+            echo "Release already published; no changes."
+            exit 0
+          fi
+          gh release create 'v0.2.0-bloodmoon.3' dist/* --target "$GITHUB_SHA" --title 'WolfVoice v0.2.0-bloodmoon.3 - group voice deployment' --notes-file 'docs/RELEASE-v0.2.0-bloodmoon.3.md' --latest
