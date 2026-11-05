@@ -1,6 +1,6 @@
 # WolfVoice : téléchargements et installation en français
 
-**Version conseillée : v0.2.0-bloodmoon.2**, avec le correctif du son spatial.
+**Paquet conseillé : v0.2.0-bloodmoon.3**, avec le même binaire serveur validé que v0.2.0-bloodmoon.2, les axes corrigés et les liens des modules de groupe à jour. Un serveur v0.2.0-bloodmoon.2 déjà fonctionnel n'a pas besoin d'être remplacé ni redémarré.
 Aucune compilation n'est nécessaire pour les fichiers ci-dessous.
 
 ## Vous installez votre propre serveur vocal pour votre grille ?
@@ -12,8 +12,8 @@ Il ne nécessite pas de liste d'IP autorisées.
 
 | À télécharger | Usage |
 | --- | --- |
-| [Serveur WolfVoice Linux x86-64 compilé](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.2/wolfvoice-x86_64-linux-musl) | Sur la machine qui héberge la voix |
-| [Somme de contrôle du serveur](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.2/wolfvoice-x86_64-linux-musl.sha256) | Vérifier le téléchargement |
+| [Serveur WolfVoice Linux x86-64 compilé](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.3/wolfvoice-x86_64-linux-musl) | Sur la machine qui héberge la voix |
+| [Somme de contrôle du serveur](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.3/wolfvoice-x86_64-linux-musl.sha256) | Vérifier le téléchargement |
 | [Modules WebRTC OpenSim 0.9.3.1 : ZIP compilé](https://github.com/Vlad-BloodMoon/opensim/releases/download/v0.9.3.1-webrtc.2/webrtc-group-recall-fix.zip) | Sur chaque simulateur |
 | [Somme de contrôle du ZIP](https://github.com/Vlad-BloodMoon/opensim/releases/download/v0.9.3.1-webrtc.2/SHA256SUMS) | Vérifier le ZIP |
 | [Modèle wolfvoice.ini pour une nouvelle grille](../contrib/wolfvoice-fresh-grid.ini.example) | À adapter avec votre nom de serveur |
@@ -37,7 +37,7 @@ Les clés d'une autre grille ne doivent jamais être réutilisées pour votre se
 
 ## Quelle version choisir ?
 
-- **v0.2.0-bloodmoon.2 : version actuelle conseillée**, axes corrigés, orientation
+- **v0.2.0-bloodmoon.3 : paquet actuel conseillé**, même serveur que v0.2.0-bloodmoon.2, axes corrigés, orientation
   normalisée et binaire compatible avec les processeurs x86-64 sans AVX.
 - v0.2.0-bloodmoon.1 : ancienne version, sans le correctif des axes.
 - **Modules v0.9.3.1-webrtc.2** : invitations des groupes OpenSim existants, y compris entre simulateurs, et correction des rappels qui faisaient ressonner les membres déjà en appel. Le correctif des axes reste côté serveur.
@@ -45,7 +45,7 @@ Les clés d'une autre grille ne doivent jamais être réutilisées pour votre se
 - Les fichiers GitHub « Source code (zip/tar.gz) » sont les sources, pas les
   programmes compilés. Utiliser les liens du tableau pour les binaires.
 
-[Release du serveur](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.2)
+[Release du serveur](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.3)
 · [Release des modules](https://github.com/Vlad-BloodMoon/opensim/releases/tag/v0.9.3.1-webrtc.2)
 · [Explication du correctif spatial](SPATIAL_INVESTIGATION.md)
 
