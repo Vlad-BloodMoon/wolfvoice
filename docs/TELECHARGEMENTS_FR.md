@@ -14,8 +14,8 @@ Il ne nécessite pas de liste d'IP autorisées.
 | --- | --- |
 | [Serveur WolfVoice Linux x86-64 compilé](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.3/wolfvoice-x86_64-linux-musl) | Sur la machine qui héberge la voix |
 | [Somme de contrôle du serveur](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.3/wolfvoice-x86_64-linux-musl.sha256) | Vérifier le téléchargement |
-| [Modules WebRTC OpenSim 0.9.3.1 : ZIP compilé](https://github.com/Vlad-BloodMoon/opensim/releases/download/v0.9.3.1-webrtc.2/webrtc-group-recall-fix.zip) | Sur chaque simulateur |
-| [Somme de contrôle du ZIP](https://github.com/Vlad-BloodMoon/opensim/releases/download/v0.9.3.1-webrtc.2/SHA256SUMS) | Vérifier le ZIP |
+| [Modules WebRTC OpenSim 0.9.3.1 : ZIP compilé](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.3/WebRTC_Modules_0.9.3.1-webrtc.2.zip) | Sur chaque simulateur |
+| [Somme de contrôle du ZIP](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.3/WebRTC_Modules_0.9.3.1-webrtc.2.zip.sha256) | Vérifier le ZIP |
 | [Modèle wolfvoice.ini pour une nouvelle grille](../contrib/wolfvoice-fresh-grid.ini.example) | À adapter avec votre nom de serveur |
 
 Le ZIP des modules fournit les trois DLL et leurs PDB :
@@ -57,4 +57,4 @@ développé par Shadow Wolf, Lone Wolf et les contributeurs du projet.
 
 Le message français « Pas de réponse » après un raccrochage normal de groupe provient du texte `nearby` mal traduit dans Firestorm ; il ne signifie pas que les membres doivent tous répondre. Un signalement a été transmis par l’opérateur. Aucun correctif de traduction Firestorm n’est inclus dans les DLL.
 Le bouton Raccrocher de la fenêtre IM peut rester grisé chez certains invités : utiliser le bouton rouge dans la liste des participants, accessible via le casque. La cause de ce second problème n’est pas confirmée.
-Le ZIP conserve son README de préversion d’origine ; les présentes instructions et les notes de la release le remplacent pour le statut et les limites connues.
+Ce ZIP regroupe les DLL/PDB validés inchangés et la documentation actualisée ; aucune recompilation ni clé privée n’est incluse.
