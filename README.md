@@ -7,17 +7,17 @@
 | Ready-to-use component | Download |
 | --- | --- |
 | Voice server, Linux x86-64, spatial axes fixed | [WolfVoice v0.2.0-bloodmoon.2](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.2) |
-| Region DLLs/PDBs, OpenSim 0.9.3.1 / .NET 8 | [WebRTC_Modules_0.9.3.1.zip](https://github.com/Vlad-BloodMoon/opensim/releases/download/v0.9.3.1-webrtc.1/WebRTC_Modules_0.9.3.1.zip) |
+| Region DLLs/PDBs, OpenSim 0.9.3.1 / .NET 8 | [webrtc-group-recall-fix.zip](https://github.com/Vlad-BloodMoon/opensim/releases/download/v0.9.3.1-webrtc.2/webrtc-group-recall-fix.zip) |
 
-No compilation is required for these downloads. The server and simulator modules are separate components. Other grids must configure their own hostname and keys; no BloodMoon key is included. Existing region modules do not need replacing just for the server-side axis fix.
+No compilation is required for these downloads. The server and simulator modules are separate components. The group invitation update changes the regional module; the WolfVoice server binary and its spatial-axis correction remain unchanged. Other grids must configure their own hostname and keys; no BloodMoon key is included. Existing region modules do not need replacing just for the server-side axis fix.
 
-## Current fork release: v0.2.0-bloodmoon.2
+## Current components: server v0.2.0-bloodmoon.2 / modules v0.9.3.1-webrtc.2
 
 [Download the release](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.2).
 The Linux x86_64 binary retains upstream 0.2.0 functionality and corrects the spatial listener axes and quaternion normalization. The operator reported successful in-world results on 28 October 2026. The published binary also passes a TLS/RPC startup test on an emulated CPU without AVX.
 See [the spatial fix and upstream review notes](docs/SPATIAL_INVESTIGATION.md).
 Local voice, participant dots, individual volume and private IM voice calls were confirmed by the operator. All hosted simulators were updated and restarted.
-Group voice is implemented upstream but has not been confirmed in these operator tests. Ad-hoc conferences need a separate external service and are not enabled by this release.
+Existing OpenSim group voice calls and cross-region invitations were validated by the operator with module release v0.9.3.1-webrtc.2, including joining an active call without ringing already-connected participants. Ad-hoc conferences need a separate external service and are not enabled by this release.
 
 Existing installations: replace only the binary, keep your systemd unit, TLS files, firewall rules and limits. See [deployment notes](docs/INTEGRATION.md).
 
@@ -116,7 +116,9 @@ It is a fresh-install helper, not the rolling-upgrade procedure. It does not cre
 
 ### 2. Install the region modules (precompiled or from source)
 
-**OpenSim 0.9.3.1 / .NET 8:** the matching three DLL/PDB pairs are already compiled in [WebRTC_Modules_0.9.3.1.zip](https://github.com/Vlad-BloodMoon/opensim/releases/download/v0.9.3.1-webrtc.1/WebRTC_Modules_0.9.3.1.zip). Stop the simulator, back up the matching files and dedicated voice INI, replace the six files in `bin/`, configure your server URL and keys, then restart from `bin/`. Keep `WebRtcJanusService.dll` if present. See [the file locations and French steps](docs/INSTALLATION_FR.md#6-installer-les-dll-sur-chaque-simulateur). For other versions/distributions, check compatibility and use the source-build instructions below where appropriate.
+For an existing compatible installation, replace only `WebRtcVoiceRegionModule.dll` and its matching `.pdb`, then restart the simulator. Keep your configuration and keys. Both ends need the updated region module for cross-region invitations. For a fresh installation, install all three DLL/PDB pairs as below.
+
+**OpenSim 0.9.3.1 / .NET 8:** the matching three DLL/PDB pairs are already compiled in [webrtc-group-recall-fix.zip](https://github.com/Vlad-BloodMoon/opensim/releases/download/v0.9.3.1-webrtc.2/webrtc-group-recall-fix.zip). Stop the simulator, back up the matching files and dedicated voice INI, replace the six files in `bin/`, configure your server URL and keys, then restart from `bin/`. Keep `WebRtcJanusService.dll` if present. See [the file locations and French steps](docs/INSTALLATION_FR.md#6-installer-les-dll-sur-chaque-simulateur). For other versions/distributions, check compatibility and use the source-build instructions below where appropriate.
 
 wolfvoice needs the region half of WebRTC voice: the **os-webrtc-janus** region module.
 Use the hardened version on branch `chatsession-p2p-session-id-and-fast-fail` of
@@ -407,3 +409,10 @@ The wire protocol is Linden Lab's, as implemented in
 ## Licence
 
 Apache License 2.0 — see [LICENSE](LICENSE).
+
+
+### Known Firestorm UI limitations for group calls
+
+The French “No Answer” message after a normal group hang-up is an incorrect translation of Firestorm's `nearby` string; it does not mean that all members must answer. It has been reported by the operator. No viewer translation fix is included in the module package.
+Some invited participants may have a disabled hang-up button in their group IM window; use the red hang-up button in the headset/voice participants panel. The cause of this separate issue is not confirmed.
+The unchanged ZIP contains its original preview README; these instructions and the release notes supersede it for release status and known issues.
