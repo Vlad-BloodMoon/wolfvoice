@@ -38,11 +38,33 @@ jobs:
           sha256sum wolfvoice-x86_64-linux-musl > wolfvoice-x86_64-linux-musl.sha256
           sha256sum -c wolfvoice-x86_64-linux-musl.sha256
           cd ..
+      - name: Package verified OpenSim modules without recompiling
+        run: |
+          set -euo pipefail
+          gh release download v0.9.3.1-webrtc.2 --repo Vlad-BloodMoon/opensim --pattern webrtc-group-recall-fix.zip --dir original
+          echo 'e66b15d8cda19d76b894a1e033f5c5ba0b225d7ce7c6a481ed3f3269b207055c  original/webrtc-group-recall-fix.zip' | sha256sum -c -
+          mkdir modules
+          unzip -q original/webrtc-group-recall-fix.zip -d modules
+          test "$(cat modules/COMMIT.txt)" = 07fca6e6e50d8998e61f3fb066f39013281216ba
+          (cd modules && sha256sum --strict -c SHA256SUMS)
+          cp docs/GROUP_VOICE_RELEASE.md modules/README.md
+          python3 - <<'PY'
+          import hashlib, pathlib, zipfile
+          root = pathlib.Path('modules')
+          (root / 'SHA256SUMS').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest() + '  ' + p.name + '\\n' for p in sorted(root.iterdir()) if p.name != 'SHA256SUMS'))
+          out = pathlib.Path('dist/WebRTC_Modules_0.9.3.1-webrtc.2.zip')
+          with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as archive:
+              for p in sorted(root.iterdir()):
+                  archive.write(p, p.name)
+          out.with_suffix('.zip.sha256').write_text(hashlib.sha256(out.read_bytes()).hexdigest() + '  ' + out.name + '\\n')
+          PY
+          (cd dist && sha256sum -c WebRTC_Modules_0.9.3.1-webrtc.2.zip.sha256)
       - name: Publish normal release
         run: |
           set -euo pipefail
           if gh release view 'v0.2.0-bloodmoon.3' >/dev/null 2>&1; then
-            echo "Release already published; no changes."
+            gh release upload 'v0.2.0-bloodmoon.3' dist/* --clobber
+            gh release edit 'v0.2.0-bloodmoon.3' --notes-file 'docs/RELEASE-v0.2.0-bloodmoon.3.md' --latest
             exit 0
           fi
           gh release create 'v0.2.0-bloodmoon.3' dist/* --target "$GITHUB_SHA" --title 'WolfVoice v0.2.0-bloodmoon.3 - group voice deployment' --notes-file 'docs/RELEASE-v0.2.0-bloodmoon.3.md' --latest
