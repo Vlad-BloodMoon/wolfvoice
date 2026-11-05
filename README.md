@@ -7,7 +7,7 @@
 | Ready-to-use component | Download |
 | --- | --- |
 | Voice server, Linux x86-64, spatial axes fixed | [WolfVoice v0.2.0-bloodmoon.3](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.3) |
-| Region DLLs/PDBs, OpenSim 0.9.3.1 / .NET 8 | [webrtc-group-recall-fix.zip](https://github.com/Vlad-BloodMoon/opensim/releases/download/v0.9.3.1-webrtc.2/webrtc-group-recall-fix.zip) |
+| Region DLLs/PDBs, OpenSim 0.9.3.1 / .NET 8 | [WebRTC_Modules_0.9.3.1-webrtc.2.zip](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.3/WebRTC_Modules_0.9.3.1-webrtc.2.zip) |
 
 No compilation is required for these downloads. The server and simulator modules are separate components. The group invitation update changes the regional module; the WolfVoice server binary and its spatial-axis correction remain unchanged. Other grids must configure their own hostname and keys; no BloodMoon key is included. Existing region modules do not need replacing just for the server-side axis fix.
 
@@ -120,7 +120,7 @@ It is a fresh-install helper, not the rolling-upgrade procedure. It does not cre
 
 For an existing compatible installation, replace only `WebRtcVoiceRegionModule.dll` and its matching `.pdb`, then restart the simulator. Keep your configuration and keys. Both ends need the updated region module for cross-region invitations. For a fresh installation, install all three DLL/PDB pairs as below.
 
-**OpenSim 0.9.3.1 / .NET 8:** the matching three DLL/PDB pairs are already compiled in [webrtc-group-recall-fix.zip](https://github.com/Vlad-BloodMoon/opensim/releases/download/v0.9.3.1-webrtc.2/webrtc-group-recall-fix.zip). Stop the simulator, back up the matching files and dedicated voice INI, replace the six files in `bin/`, configure your server URL and keys, then restart from `bin/`. Keep `WebRtcJanusService.dll` if present. See [the file locations and French steps](docs/INSTALLATION_FR.md#6-installer-les-dll-sur-chaque-simulateur). For other versions/distributions, check compatibility and use the source-build instructions below where appropriate.
+**OpenSim 0.9.3.1 / .NET 8:** the matching three DLL/PDB pairs are already compiled in [WebRTC_Modules_0.9.3.1-webrtc.2.zip](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.3/WebRTC_Modules_0.9.3.1-webrtc.2.zip). Stop the simulator, back up the matching files and dedicated voice INI, replace the six files in `bin/`, configure your server URL and keys, then restart from `bin/`. Keep `WebRtcJanusService.dll` if present. See [the file locations and French steps](docs/INSTALLATION_FR.md#6-installer-les-dll-sur-chaque-simulateur). For other versions/distributions, check compatibility and use the source-build instructions below where appropriate.
 
 wolfvoice needs the region half of WebRTC voice: the **os-webrtc-janus** region module.
 Use the hardened version on branch `chatsession-p2p-session-id-and-fast-fail` of
@@ -417,4 +417,4 @@ Apache License 2.0 — see [LICENSE](LICENSE).
 
 The French “No Answer” message after a normal group hang-up is an incorrect translation of Firestorm's `nearby` string; it does not mean that all members must answer. It has been reported by the operator. No viewer translation fix is included in the module package.
 Some invited participants may have a disabled hang-up button in their group IM window; use the red hang-up button in the headset/voice participants panel. The cause of this separate issue is not confirmed.
-The unchanged ZIP contains its original preview README; these instructions and the release notes supersede it for release status and known issues.
+This repackaged ZIP contains the unchanged validated DLL/PDB files and updated documentation; no recompilation or credential is included.
