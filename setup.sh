@@ -27,7 +27,7 @@ set -euo pipefail
 
 REPO="Vlad-BloodMoon/wolfvoice"
 # Pin the grid-validated fork release; do not install upstream binaries.
-RELEASE_TAG="v0.2.0-bloodmoon.2"
+RELEASE_TAG="v0.2.0-bloodmoon.3"
 PREFIX="${PREFIX:-/usr/local/bin}"
 CONFDIR="/etc/wolfvoice"
 TLSDIR="$CONFDIR/tls"
