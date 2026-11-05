@@ -188,11 +188,11 @@ constituent pas une autorisation d'utiliser le service.
 Pour mettre à jour des modules compatibles déjà installés, remplacer uniquement `WebRtcVoiceRegionModule.dll` et son `.pdb`, conserver les autres DLL, la configuration et les clés, puis redémarrer. Les étapes ci-dessous installent les trois paires pour une nouvelle installation.
 
 Télécharger :
-- [webrtc-group-recall-fix.zip](https://github.com/Vlad-BloodMoon/opensim/releases/download/v0.9.3.1-webrtc.2/webrtc-group-recall-fix.zip)
-- [sa somme de contrôle](https://github.com/Vlad-BloodMoon/opensim/releases/download/v0.9.3.1-webrtc.2/SHA256SUMS)
+- [WebRTC_Modules_0.9.3.1-webrtc.2.zip](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.3/WebRTC_Modules_0.9.3.1-webrtc.2.zip)
+- [sa somme de contrôle](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.3/WebRTC_Modules_0.9.3.1-webrtc.2.zip.sha256)
 
 Sous Linux, depuis le dossier contenant ces deux téléchargements :
-`sha256sum -c SHA256SUMS`.
+`sha256sum -c WebRTC_Modules_0.9.3.1-webrtc.2.zip.sha256`.
 Le résultat doit être `OK`. Le ZIP contient aussi les sommes des modules.
 
 1. Arrêter le simulateur et sauvegarder les fichiers à remplacer ainsi que sa
@@ -302,4 +302,4 @@ Développé à partir de WolfVoice, par Shadow Wolf, Lone Wolf et les contribute
 
 Le message français « Pas de réponse » après un raccrochage normal de groupe provient du texte `nearby` mal traduit dans Firestorm ; il ne signifie pas que les membres doivent tous répondre. Un signalement a été transmis par l’opérateur. Aucun correctif de traduction Firestorm n’est inclus dans les DLL.
 Le bouton Raccrocher de la fenêtre IM peut rester grisé chez certains invités : utiliser le bouton rouge dans la liste des participants, accessible via le casque. La cause de ce second problème n’est pas confirmée.
-Le ZIP conserve son README de préversion d’origine ; les présentes instructions et les notes de la release le remplacent pour le statut et les limites connues.
+Ce ZIP regroupe les DLL/PDB validés inchangés et la documentation actualisée ; aucune recompilation ni clé privée n’est incluse.
