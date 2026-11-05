@@ -113,7 +113,7 @@ positional audio.
 Download `wolfvoice-x86_64-linux-musl` and its `.sha256` file from [this fork's release](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.3).
 Verify the checksum, back up the current binary and replace it during a planned voice interruption. Keep the existing systemd unit, certificates, account, IP restrictions and configuration. No installer is needed for an existing installation.
 
-The retained `setup.sh` is pinned to this fork's v0.2.0-bloodmoon.2 binary, identical to the server executable republished in v0.2.0-bloodmoon.3.
+The current `setup.sh` on `main` downloads this fork's v0.2.0-bloodmoon.3 binary. Historical source tags are immutable and retain their original installer; use the current installation guide rather than an old tagged setup.sh.
 It is a fresh-install helper, not the rolling-upgrade procedure. It does not create keys. For a new server, follow [installation and keys](docs/INSTALLATION.md); existing deployments should follow [deployment notes](docs/INTEGRATION.md).
 
 ### 2. Install the region modules (precompiled or from source)
