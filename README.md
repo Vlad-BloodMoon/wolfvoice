@@ -6,14 +6,16 @@
 
 | Ready-to-use component | Download |
 | --- | --- |
-| Voice server, Linux x86-64, spatial axes fixed | [WolfVoice v0.2.0-bloodmoon.2](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.2) |
+| Voice server, Linux x86-64, spatial axes fixed | [WolfVoice v0.2.0-bloodmoon.3](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.3) |
 | Region DLLs/PDBs, OpenSim 0.9.3.1 / .NET 8 | [webrtc-group-recall-fix.zip](https://github.com/Vlad-BloodMoon/opensim/releases/download/v0.9.3.1-webrtc.2/webrtc-group-recall-fix.zip) |
 
 No compilation is required for these downloads. The server and simulator modules are separate components. The group invitation update changes the regional module; the WolfVoice server binary and its spatial-axis correction remain unchanged. Other grids must configure their own hostname and keys; no BloodMoon key is included. Existing region modules do not need replacing just for the server-side axis fix.
 
-## Current components: server v0.2.0-bloodmoon.2 / modules v0.9.3.1-webrtc.2
+**Release v0.2.0-bloodmoon.3 republishes the same validated server binary as v0.2.0-bloodmoon.2, together with the group voice module pack and updated instructions. An already-running v0.2.0-bloodmoon.2 server does not need replacing or restarting for this update.**
 
-[Download the release](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.2).
+## Current components: server package v0.2.0-bloodmoon.3 / modules v0.9.3.1-webrtc.2
+
+[Download the release](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.3).
 The Linux x86_64 binary retains upstream 0.2.0 functionality and corrects the spatial listener axes and quaternion normalization. The operator reported successful in-world results on 28 October 2026. The published binary also passes a TLS/RPC startup test on an emulated CPU without AVX.
 See [the spatial fix and upstream review notes](docs/SPATIAL_INVESTIGATION.md).
 Local voice, participant dots, individual volume and private IM voice calls were confirmed by the operator. All hosted simulators were updated and restarted.
@@ -108,10 +110,10 @@ positional audio.
 
 ### 1. Update the voice server
 
-Download `wolfvoice-x86_64-linux-musl` and its `.sha256` file from [this fork's release](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.2).
+Download `wolfvoice-x86_64-linux-musl` and its `.sha256` file from [this fork's release](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.3).
 Verify the checksum, back up the current binary and replace it during a planned voice interruption. Keep the existing systemd unit, certificates, account, IP restrictions and configuration. No installer is needed for an existing installation.
 
-The retained `setup.sh` now points to this fork's v0.2.0-bloodmoon.2 binary.
+The retained `setup.sh` is pinned to this fork's v0.2.0-bloodmoon.2 binary, identical to the server executable republished in v0.2.0-bloodmoon.3.
 It is a fresh-install helper, not the rolling-upgrade procedure. It does not create keys. For a new server, follow [installation and keys](docs/INSTALLATION.md); existing deployments should follow [deployment notes](docs/INTEGRATION.md).
 
 ### 2. Install the region modules (precompiled or from source)
