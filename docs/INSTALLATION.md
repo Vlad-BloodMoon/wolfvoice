@@ -2,9 +2,9 @@
 
 **[Guide français pas à pas](INSTALLATION_FR.md) · [Téléchargements compilés](TELECHARGEMENTS_FR.md)**
 
-Precompiled OpenSim 0.9.3.1 DLL/PDB package: [download ZIP](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.3/WebRTC_Modules_0.9.3.1-webrtc.2.zip). No compilation is needed for this matching version; configure your own voice server and keys.
+Precompiled OpenSim 0.9.3.1 DLL/PDB package: [download ZIP](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.4/WebRTC_Modules_BloodMoon_0.9.3.1-webrtc.3.zip). No compilation is needed for this matching BloodMoon version. The complete AdHoc feature set requires the **BloodMoon-modified WolfVoice server**, the **matching regional modules** and a **separate conference PHP/MySQL registry**, not stock upstream WolfVoice.
 
-For this fork, the current setup.sh on main installs the v0.2.0-bloodmoon.3 server but does NOT create signing keys. Historical source tags retain their original installer; use the current script linked below.
+For this fork, the current setup.sh on main installs the v0.2.0-bloodmoon.4 server but does NOT create signing keys, install simulator DLLs, or deploy the conference PHP API. Existing servers using the validated `.2/.3` binary need no server replacement for this feature. Historical source tags retain their original installer; use the current script linked below.
 Create them manually as described below. Never paste a key into a public issue,
 README, screenshot or download archive.
 
@@ -137,6 +137,23 @@ modules re-read files within about one minute, but DLL changes need a restart.
 Test local voice, participant dots, per-user volume, a private invitation and
 audio in both directions, then hangup and return to local voice.
 
+
+## 6A. BloodMoon multi-avatar IM conferences and optional group voice
+
+**Compatibility warning:** the **stock upstream WolfVoice server has not yet integrated the complete BloodMoon spatial-axis/group-voice work**. The tested complete package is for the [BloodMoon WolfVoice server](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.4) with the [OpenSim WebRTC module `v0.9.3.1-webrtc.3`](https://github.com/Vlad-BloodMoon/opensim/releases/tag/v0.9.3.1-webrtc.3). Ad-hoc conferences **additionally depend on a separate central conference registry** ([PHP/MySQL source, installation and trust model](https://github.com/Vlad-BloodMoon/OpenSimulator-AdHocConferences)). A standalone server and three DLLs **do not** create a conference registry.
+
+**Only if the simulator has been approved by BloodMoon**: add to its existing `[WebRtcVoice]` section without disturbing server URI/key files:
+
+```ini
+ConferenceApiUrl = https://bloodmoonpack.com/adhocconf/wolf_api.php
+```
+
+The URL is restricted to trusted, authorized simulator hosts sharing the correct voice credential key. It is **not a public unrestricted API**. For your **own independent grid**, deploy and configure your **own** conference registry and use **your own** URL and key material instead. Do not copy BloodMoon's key onto unknown or untrusted machines. A grid operator holding the shared secret can sign actions for other avatar UUIDs: consider independent per-simulator authorization before federation.
+
+**Both simulators** need the `.3` compatible regional DLL **and** their own `ConferenceApiUrl` line. If the second simulator is missing the line, its residents will not receive multi-avatar IM conference invitations. Restart each updated simulator.
+
+The features validated on BloodMoon (7 Nov 2026): private IM voice, standard OpenSim group calls, multi-avatar **text** IM conferences (without echo), optional conference **voice** across separate simulators, independent audio hang-up and rejoin with other members remaining unaffected.
+
 ## 7. Network and common errors
 
 Keep TCP 9443 restricted to the public egress IPs of authorized region hosts.
@@ -154,7 +171,7 @@ Do not change existing grid firewall rules just to install this update.
   the IP allowlist is then the access restriction.
 - No key value should appear in support messages.
 
-Existing OpenSim group voice calls and cross-region invitations were validated with module release v0.9.3.1-webrtc.2. For an existing compatible installation, replace only WebRtcVoiceRegionModule.dll and its matching PDB; keep the other DLLs, configuration and keys, then restart. Ad-hoc conferences need a separate
+Existing OpenSim group voice calls and cross-region invitations were validated with module release v0.9.3.1-webrtc.3. For an existing compatible installation, replace only WebRtcVoiceRegionModule.dll and its matching PDB; keep the other DLLs, configuration and keys, then restart. Ad-hoc conferences need a separate
 external service.
 
 
