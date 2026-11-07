@@ -6,6 +6,8 @@
 
 **Français : [téléchargements compilés et choix des fichiers](docs/TELECHARGEMENTS_FR.md) · [installation pas à pas pour votre propre grille](docs/INSTALLATION_FR.md).**
 
+**[Versioned installer with TLS hooks](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.4/wolfvoice-installation-bloodmoon.4.tar.gz)** — for **new server installations only**. Existing BloodMoon voice servers using the validated `.2/.3` executable should **not** rerun this installer; update simulator modules instead.
+
 | Ready-to-use component | Download |
 | --- | --- |
 | Voice server, Linux x86-64, spatial axes fixed | [WolfVoice v0.2.0-bloodmoon.4](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.4) |
