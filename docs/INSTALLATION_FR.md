@@ -4,7 +4,7 @@
 
 Ce parcours concerne **une nouvelle installation** sur un serveur Ubuntu 24.04
 Linux x86-64 avec systemd, et des simulateurs OpenSim 0.9.3.1 / .NET 8.
-Il installe **v0.2.0-bloodmoon.3**, avec le correctif des axes, sans compilation.
+Il installe le **serveur BloodMoon v0.2.0-bloodmoon.4**, avec le correctif des axes, sans compilation. **Cette commande seule ne déploie pas le service central de conférences AdHoc.**
 
 Si la voix fonctionne déjà, suivre plutôt [la mise à jour en fin de page](#mise-à-jour-dun-serveur-déjà-installé).
 Ne pas lancer l'installateur pour mettre à jour un service personnalisé.
@@ -55,7 +55,7 @@ Ne pas activer ou réinitialiser UFW à distance sans préserver votre accès SS
 ## 3. Installer le serveur vocal
 
 **Sur la machine du serveur vocal**, télécharger le dossier d'installation
-complet pour inclure les scripts de renouvellement TLS. Le téléchargement ci-dessous fige la révision de l’installateur qui sélectionne la release v0.2.0-bloodmoon.3 ; il ne compile rien.
+complet pour inclure les scripts de renouvellement TLS. La commande télécharge le dépôt courant, incluant les scripts de renouvellement TLS. Elle **ne compile rien** et utilise l'installateur épinglé sur la release BloodMoon `.4`. Le serveur WolfVoice officiel ne comprend pas encore tous les correctifs BloodMoon.
 
 ```bash
 (
@@ -185,14 +185,14 @@ constituent pas une autorisation d'utiliser le service.
 
 ## 6. Installer les DLL sur chaque simulateur
 
-Pour mettre à jour des modules compatibles déjà installés, remplacer uniquement `WebRtcVoiceRegionModule.dll` et son `.pdb`, conserver les autres DLL, la configuration et les clés, puis redémarrer. Les étapes ci-dessous installent les trois paires pour une nouvelle installation.
+Pour mettre à jour des modules **déjà compatibles avec la même base**, remplacer uniquement `WebRtcVoiceRegionModule.dll` et son `.pdb`, conserver les autres DLL, la configuration et les clés, puis redémarrer. Les étapes ci-dessous installent les **trois paires compatibles** pour une nouvelle installation.
 
 Télécharger :
-- [WebRTC_Modules_0.9.3.1-webrtc.2.zip](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.3/WebRTC_Modules_0.9.3.1-webrtc.2.zip)
-- [sa somme de contrôle](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.3/WebRTC_Modules_0.9.3.1-webrtc.2.zip.sha256)
+- [WebRTC_Modules_BloodMoon_0.9.3.1-webrtc.3.zip](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.4/WebRTC_Modules_BloodMoon_0.9.3.1-webrtc.3.zip)
+- [sa somme de contrôle](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.4/WebRTC_Modules_BloodMoon_0.9.3.1-webrtc.3.zip.sha256)
 
 Sous Linux, depuis le dossier contenant ces deux téléchargements :
-`sha256sum -c WebRTC_Modules_0.9.3.1-webrtc.2.zip.sha256`.
+`sha256sum -c WebRTC_Modules_BloodMoon_0.9.3.1-webrtc.3.zip.sha256`.
 Le résultat doit être `OK`. Le ZIP contient aussi les sommes des modules.
 
 1. Arrêter le simulateur et sauvegarder les fichiers à remplacer ainsi que sa
@@ -229,6 +229,8 @@ de l'ancien fichier. Copier ceci, puis remplacer le nom DNS :
     RpcKeyFile = voice_rpc_key
     CredKeyFile = voice_cred_key
     MessageDetails = false
+    ; Pour les simulateurs autorisés à utiliser le service de conférences BloodMoon :
+    ConferenceApiUrl = https://bloodmoonpack.com/adhocconf/wolf_api.php
     StunServers = stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302
 
 [VivoxVoice]
@@ -265,7 +267,7 @@ Redémarrer le simulateur. Avec un viewer compatible WebRTC :
 6. Pour tester entre deux simulateurs, équiper les deux des mêmes modules et clés.
 
 Les visiteurs Hypergrid ont été testés sur BloodMoon avec succès.
-Les appels vocaux des groupes OpenSim existants et leurs invitations entre simulateurs ont été validés avec les modules v0.9.3.1-webrtc.2. Tester aussi un appel de groupe puis quitter et rejoindre à nouveau la session. Les conférences ad hoc ne sont pas fournies par ce pack seul.
+Les appels vocaux des groupes OpenSim existants et leurs invitations entre simulateurs ont été validés avec les modules `v0.9.3.1-webrtc.3`. **Les conférences AdHoc écrites et vocales sont également validées entre deux simulateurs** ; elles nécessitent **en plus** l’API centrale PHP/MySQL et une configuration `ConferenceApiUrl` sur chacun. Une nouvelle grille indépendante doit déployer et adapter sa propre API ; le service BloodMoon hébergé est réservé aux simulateurs approuvés.
 Ne pas confondre ces fonctionnalités avec un appel privé entre deux avatars.
 
 ## En cas de problème
@@ -292,8 +294,7 @@ Sauvegarder le binaire actuel, remplacer uniquement
 `wolfvoice.service` pendant une courte interruption annoncée.
 Conserver le compte, l'unité systemd, les certificats, les clés et le pare-feu.
 
-Le correctif des axes ne demande pas de nouvelles DLL si les modules
-v0.9.3.1-webrtc.1 sont déjà installés.
+Le **correctif des axes côté serveur** ne demande pas de nouvelle DLL. En revanche, pour les **conférences texte/voix AdHoc**, installer `v0.9.3.1-webrtc.3` et définir `ConferenceApiUrl` sur chaque simulateur.
 
 Développé à partir de WolfVoice, par Shadow Wolf, Lone Wolf et les contributeurs.
 
