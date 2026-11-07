@@ -1,4 +1,6 @@
-# wolfvoice
+# wolfvoice — BloodMoon WebRTC voice
+
+> **IMPORTANT — BloodMoon-only compatibility (7 Nov 2026).** This published build targets **BloodMoon's modified WolfVoice server**, **OpenSimulator 0.9.3.1/.NET 8**, and, for ad-hoc conferences, the separate **BloodMoon PHP/MySQL conference API**. The stock upstream WolfVoice server does **not** yet include all BloodMoon axis/group features. The server executable itself is unchanged from the verified `v0.2.0-bloodmoon.2/.3` build; the new functionality is in the regional modules and conference API. **Do not share the voice credential key with untrusted operators.** [Complete release details](docs/RELEASE-v0.2.0-bloodmoon.4.md) · [French guide](docs/INSTALLATION_FR.md).
 
 ## Installation facile / ready-to-use downloads
 
@@ -6,20 +8,20 @@
 
 | Ready-to-use component | Download |
 | --- | --- |
-| Voice server, Linux x86-64, spatial axes fixed | [WolfVoice v0.2.0-bloodmoon.3](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.3) |
-| Region DLLs/PDBs, OpenSim 0.9.3.1 / .NET 8 | [WebRTC_Modules_0.9.3.1-webrtc.2.zip](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.3/WebRTC_Modules_0.9.3.1-webrtc.2.zip) |
+| Voice server, Linux x86-64, spatial axes fixed | [WolfVoice v0.2.0-bloodmoon.4](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.4) |
+| Region DLLs/PDBs, OpenSim 0.9.3.1 / .NET 8 | [WebRTC_Modules_BloodMoon_0.9.3.1-webrtc.3.zip](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.4/WebRTC_Modules_BloodMoon_0.9.3.1-webrtc.3.zip) |
 
-No compilation is required for these downloads. The server and simulator modules are separate components. The group invitation update changes the regional module; the WolfVoice server binary and its spatial-axis correction remain unchanged. Other grids must configure their own hostname and keys; no BloodMoon key is included. Existing region modules do not need replacing just for the server-side axis fix.
+No compilation is required for these downloads. The server and simulator modules are separate components. The updated simulator package provides group voice and **ad-hoc multi-avatar IM conferences with optional voice**, including **cross-simulator text/voice**. The WolfVoice server binary and its spatial-axis correction remain unchanged. The ad-hoc feature additionally requires a signed PHP/MySQL conference registry; the BloodMoon endpoint is **restricted to approved trusted simulators**. No BloodMoon key is included. Existing region modules do not need replacing just for the server-side axis fix.
 
-**Release v0.2.0-bloodmoon.3 republishes the same validated server binary as v0.2.0-bloodmoon.2, together with the group voice module pack and updated instructions. An already-running v0.2.0-bloodmoon.2 server does not need replacing or restarting for this update.**
+**Release v0.2.0-bloodmoon.4 republishes the same validated server binary as v0.2.0-bloodmoon.2/.3, together with the COMPLETE WebRTC module pack (`v0.9.3.1-webrtc.3`) and new AdHoc conference documentation. Existing functioning servers do not need a restart just to install the new regional module.**
 
-## Current components: server package v0.2.0-bloodmoon.3 / modules v0.9.3.1-webrtc.2
+## Current components: server package v0.2.0-bloodmoon.4 / modules v0.9.3.1-webrtc.3
 
-[Download the release](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.3).
+[Download the release](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.4).
 The Linux x86_64 binary retains upstream 0.2.0 functionality and corrects the spatial listener axes and quaternion normalization. The operator reported successful in-world results on 28 October 2026. The published binary also passes a TLS/RPC startup test on an emulated CPU without AVX.
 See [the spatial fix and upstream review notes](docs/SPATIAL_INVESTIGATION.md).
 Local voice, participant dots, individual volume and private IM voice calls were confirmed by the operator. All hosted simulators were updated and restarted.
-Existing OpenSim group voice calls and cross-region invitations were validated by the operator with module release v0.9.3.1-webrtc.2, including joining an active call without ringing already-connected participants. Ad-hoc conferences need a separate external service and are not enabled by this release.
+Existing OpenSim group voice calls and cross-region invitations were validated by the operator. The new module release `v0.9.3.1-webrtc.3` adds BloodMoon-tested multi-avatar IM conferences, optional voice and individual hang-up/rejoin across simulator processes. Ad-hoc multi-avatar IM and optional voice conferences were also **tested across two simulators** with `v0.9.3.1-webrtc.3`. They require the [separate BloodMoon PHP/MySQL conference service](https://github.com/Vlad-BloodMoon/OpenSimulator-AdHocConferences) and `ConferenceApiUrl` configured on **every participating simulator**.
 
 Existing installations: replace only the binary, keep your systemd unit, TLS files, firewall rules and limits. See [deployment notes](docs/INTEGRATION.md).
 
@@ -46,6 +48,20 @@ OpenSim region  +  os-webrtc-janus addon   ← REQUIRED
         ▼
    viewers   (UDP media)
 ```
+
+## Tested BloodMoon feature set
+
+- Proximity voice with corrected spatial axes; participant indicators and per-user gain.
+- Private voice calls, and group voice invitations across simulators.
+- Ad-hoc **multi-avatar text IM conversations** and **optional** conference voice, across separate simulators.
+- Each participant may leave/rejoin audio while keeping the text conference open, without spurious notifications to others.
+- **Required on every simulator:** the full compatible `v0.9.3.1-webrtc.3` module, existing WolfVoice voice key(s), and in `[WebRtcVoice]`:
+
+  ```ini
+  ConferenceApiUrl = https://bloodmoonpack.com/adhocconf/wolf_api.php
+  ```
+
+The BloodMoon endpoint is private to explicitly authorized simulators; third-party self-hosting requires deploying/adapting the [central conference API](https://github.com/Vlad-BloodMoon/OpenSimulator-AdHocConferences) and carefully reviewing its shared-key trust model.
 
 ## What you need
 
@@ -110,20 +126,20 @@ positional audio.
 
 ### 1. Update the voice server
 
-Download `wolfvoice-x86_64-linux-musl` and its `.sha256` file from [this fork's release](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.3).
+Download `wolfvoice-x86_64-linux-musl` and its `.sha256` file from [this fork's release](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.4).
 Verify the checksum, back up the current binary and replace it during a planned voice interruption. Keep the existing systemd unit, certificates, account, IP restrictions and configuration. No installer is needed for an existing installation.
 
-The current `setup.sh` on `main` downloads this fork's v0.2.0-bloodmoon.3 binary. Historical source tags are immutable and retain their original installer; use the current installation guide rather than an old tagged setup.sh.
+The current `setup.sh` on `main` downloads this fork's v0.2.0-bloodmoon.4 binary. **The script installs only the WolfVoice server, not OpenSimulator DLLs or the conference API.** Historical source tags are immutable and retain their original installer; use the current installation guide rather than an old tagged setup.sh.
 It is a fresh-install helper, not the rolling-upgrade procedure. It does not create keys. For a new server, follow [installation and keys](docs/INSTALLATION.md); existing deployments should follow [deployment notes](docs/INTEGRATION.md).
 
 ### 2. Install the region modules (precompiled or from source)
 
-For an existing compatible installation, replace only `WebRtcVoiceRegionModule.dll` and its matching `.pdb`, then restart the simulator. Keep your configuration and keys. Both ends need the updated region module for cross-region invitations. For a fresh installation, install all three DLL/PDB pairs as below.
+For an existing compatible installation with the **same baseline**, you may replace just `WebRtcVoiceRegionModule.dll` and its matching `.pdb`; keep your other matching files and private keys. For a fresh or uncertain installation, install **all three matching DLL/PDB pairs** from the complete ZIP. **For ad-hoc text/voice, add `ConferenceApiUrl` on every simulator**, not just the first. Do not run the old modules with a mismatched source build.
 
-**OpenSim 0.9.3.1 / .NET 8:** the matching three DLL/PDB pairs are already compiled in [WebRTC_Modules_0.9.3.1-webrtc.2.zip](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.3/WebRTC_Modules_0.9.3.1-webrtc.2.zip). Stop the simulator, back up the matching files and dedicated voice INI, replace the six files in `bin/`, configure your server URL and keys, then restart from `bin/`. Keep `WebRtcJanusService.dll` if present. See [the file locations and French steps](docs/INSTALLATION_FR.md#6-installer-les-dll-sur-chaque-simulateur). For other versions/distributions, check compatibility and use the source-build instructions below where appropriate.
+**OpenSim 0.9.3.1 / .NET 8:** the matching three DLL/PDB pairs are already compiled in [WebRTC_Modules_BloodMoon_0.9.3.1-webrtc.3.zip](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.4/WebRTC_Modules_BloodMoon_0.9.3.1-webrtc.3.zip). Stop the simulator, back up the matching files and dedicated voice INI, replace the six files in `bin/`, configure your server URL and keys, then restart from `bin/`. Keep `WebRtcJanusService.dll` if present. See [the file locations and French steps](docs/INSTALLATION_FR.md#6-installer-les-dll-sur-chaque-simulateur). For other versions/distributions, check compatibility carefully; the **BloodMoon AdHoc feature set is not guaranteed by the generic upstream source-build instructions below**.
 
 wolfvoice needs the region half of WebRTC voice: the **os-webrtc-janus** region module.
-Use the hardened version on branch `chatsession-p2p-session-id-and-fast-fail` of
+The following source-build discussion describes the **generic upstream connector**, not a replacement for the versioned BloodMoon `.3` package. Use the hardened version on branch `chatsession-p2p-session-id-and-fast-fail` of
 [intelligentwolf/os-webrtc-janus](https://github.com/intelligentwolf/os-webrtc-janus) -
 it is the one wolfvoice 0.2.0 is tested against, and the only one that sends the relay
 key, signs call tickets and feeds avatar positions. It needs a .NET 8 OpenSimulator
