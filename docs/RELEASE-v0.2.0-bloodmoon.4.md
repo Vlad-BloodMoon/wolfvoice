@@ -16,6 +16,16 @@
 
 **The server executable is intentionally byte-identical to the successful `v0.2.0-bloodmoon.3` / `.2` build.** No new media-server binary is required for the ad-hoc feature; **simulator module and central conference API** provide the new behavior. If your BloodMoon server is already functioning with that executable, **do not replace/restart it just to upgrade region modules**.
 
+## Maintenance refresh — same tag and download links (7 November 2026)
+
+The simulator module archives are refreshed **without changing the release name or ZIP filename** to carry a small conference notification update:
+
+- The sender of conference system notices is now **OpenSimulator**, not Wolf Territories.
+- The separate PHP conference registry permits re-inviting recipients still marked `invited` after a disconnection/relogin, without ringing members still marked `joined`.
+- **Important**: this is a focused maintenance build, not a new end-to-end field validation. If the first reconnect does not reset the avatar's state from `joined`, the reinvitation issue can still occur. Testing with real simulator sessions is required.
+- The PHP fix must be **deployed separately** to the BloodMoon server as `wolf_api.php`; replacing DLLs alone does not update the PHP backend.
+- The main WolfVoice server executable is **unchanged**. The updated module ZIP and SHA-256 values will be different, though release URLs stay the same.
+
 ## Confirmed functionality on BloodMoon (7 November 2026)
 
 - Local spatial/proximity audio with corrected listener axes, participant dots and per-user volume.
