@@ -64,9 +64,10 @@ sudo apt-get update
 sudo apt-get install -y curl ca-certificates openssl python3
 mkdir -p "$HOME/wolfvoice-installation"
 cd "$HOME/wolfvoice-installation"
-curl -fL https://github.com/Vlad-BloodMoon/wolfvoice/archive/6fcf39e5fe9a68dfbf5cf70a111dbac68e91b902.tar.gz   -o wolfvoice-installation.tar.gz
-tar -xzf wolfvoice-installation.tar.gz
-cd wolfvoice-6fcf39e5fe9a68dfbf5cf70a111dbac68e91b902
+curl -fL https://github.com/Vlad-BloodMoon/wolfvoice/archive/refs/heads/main.tar.gz -o wolfvoice-installation.tar.gz
+mkdir -p source
+tar -xzf wolfvoice-installation.tar.gz -C source --strip-components=1
+cd source
 less setup.sh
 sudo bash setup.sh
 )
@@ -229,8 +230,9 @@ de l'ancien fichier. Copier ceci, puis remplacer le nom DNS :
     RpcKeyFile = voice_rpc_key
     CredKeyFile = voice_cred_key
     MessageDetails = false
-    ; Pour les simulateurs autorisés à utiliser le service de conférences BloodMoon :
-    ConferenceApiUrl = https://bloodmoonpack.com/adhocconf/wolf_api.php
+    ; Conférences AdHoc : API à déployer sur VOTRE propre grille.
+    ; Les simulateurs approuvés par BloodMoon peuvent utiliser :
+    ; ConferenceApiUrl = https://bloodmoonpack.com/adhocconf/wolf_api.php
     StunServers = stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302
 
 [VivoxVoice]
