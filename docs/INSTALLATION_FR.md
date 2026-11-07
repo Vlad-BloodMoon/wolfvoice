@@ -272,6 +272,22 @@ Les visiteurs Hypergrid ont été testés sur BloodMoon avec succès.
 Les appels vocaux des groupes OpenSim existants et leurs invitations entre simulateurs ont été validés avec les modules `v0.9.3.1-webrtc.3`. **Les conférences AdHoc écrites et vocales sont également validées entre deux simulateurs** ; elles nécessitent **en plus** l’API centrale PHP/MySQL et une configuration `ConferenceApiUrl` sur chacun. Une nouvelle grille indépendante doit déployer et adapter sa propre API ; le service BloodMoon hébergé est réservé aux simulateurs approuvés.
 Ne pas confondre ces fonctionnalités avec un appel privé entre deux avatars.
 
+## Activer les conférences IM écrites et vocales (BloodMoon)
+
+Ce sont de véritables **conversations IM à plusieurs avatars** dans Firestorm, indépendantes des groupes OpenSimulator. L'appel vocal est **facultatif**. Chaque participant peut raccrocher et revenir dans la voix sans fermer les IM ni interrompre les autres. Ces fonctions ont été validées **entre deux simulateurs**.
+
+**Sur CHAQUE simulateur expressément autorisé par BloodMoon**, ajouter dans la section `[WebRtcVoice]` de son propre `wolfvoice.ini`, sans modifier les anciennes lignes :
+
+```ini
+ConferenceApiUrl = https://bloodmoonpack.com/adhocconf/wolf_api.php
+```
+
+Redémarrer **chaque** simulateur. Si cette ligne manque sur un simulateur, ses avatars ne recevront pas les invitations aux conférences créées ailleurs, même avec la bonne DLL.
+
+**Ne pas ajouter l'URL ci-dessus à une grille indépendante sans autorisation :** l'API BloodMoon est réservée aux simulateurs de confiance déjà approuvés. Elle utilise une clé partagée, dont le contenu ne doit jamais être publié. Pour une autre grille, installer sa propre API PHP/MySQL depuis [OpenSimulator-AdHocConferences](https://github.com/Vlad-BloodMoon/OpenSimulator-AdHocConferences) et utiliser **son propre** `ConferenceApiUrl`.
+
+Le pack complet `v0.9.3.1-webrtc.3` est prévu pour **le serveur WolfVoice BloodMoon modifié**. Le serveur officiel d'origine ne possède pas encore toutes nos corrections et fonctionnalités.
+
 ## En cas de problème
 
 | Symptôme | Vérification |
