@@ -1,0 +1,98 @@
+name: Publish verified BloodMoon WolfVoice v0.2.0-bloodmoon.4
+
+# One-time release. Intentionally keeps the exact field-tested audio executable
+# and complete OpenSimulator module package from their already verified releases.
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/publish-bloodmoon4.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  package-and-publish:
+    if: github.repository == 'Vlad-BloodMoon/wolfvoice' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out release sources and guides
+        uses: actions/checkout@v4
+
+      - name: Verify installer shell syntax
+        run: bash -n setup.sh
+
+      - name: Download and verify previous validated server binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p server dist
+          gh release download v0.2.0-bloodmoon.3 --repo Vlad-BloodMoon/wolfvoice \
+            --pattern 'wolfvoice-x86_64-linux-musl*' --dir server
+          (cd server && sha256sum -c wolfvoice-x86_64-linux-musl.sha256)
+          test -s server/wolfvoice-x86_64-linux-musl
+          cp server/wolfvoice-x86_64-linux-musl dist/
+          cp server/wolfvoice-x86_64-linux-musl.sha256 dist/
+          (cd dist && sha256sum -c wolfvoice-x86_64-linux-musl.sha256)
+
+      - name: Download and verify complete OpenSimulator modules .3
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p opensim3
+          gh release download v0.9.3.1-webrtc.3 --repo Vlad-BloodMoon/opensim \
+            --pattern 'WebRTC_Modules_BloodMoon_0.9.3.1-webrtc.3.zip*' --dir opensim3
+          (cd opensim3 && sha256sum -c WebRTC_Modules_BloodMoon_0.9.3.1-webrtc.3.zip.sha256)
+          mkdir -p inspect
+          unzip -q opensim3/WebRTC_Modules_BloodMoon_0.9.3.1-webrtc.3.zip -d inspect
+          for name in WebRtcVoice WebRtcVoiceRegionModule WebRtcVoiceServiceModule; do
+            test -s "inspect/${name}.dll"
+            test -s "inspect/${name}.pdb"
+          done
+          (cd inspect && sha256sum -c SHA256SUMS)
+          grep -Fq 'BloodMoon WolfVoice only' inspect/PROVENANCE.txt
+          cp opensim3/* dist/
+          (cd dist && sha256sum -c WebRTC_Modules_BloodMoon_0.9.3.1-webrtc.3.zip.sha256)
+
+      - name: Package complete versioned server installer with TLS hooks
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s contrib/10-open-acme-port.sh
+          test -s contrib/10-close-acme-port.sh
+          test -s contrib/10-install-wolfvoice-cert.sh
+          grep -Fq 'RELEASE_TAG="v0.2.0-bloodmoon.4"' setup.sh
+          tar -czf dist/wolfvoice-installation-bloodmoon.4.tar.gz \
+            setup.sh \
+            contrib/10-open-acme-port.sh \
+            contrib/10-close-acme-port.sh \
+            contrib/10-install-wolfvoice-cert.sh \
+            docs/INSTALLATION.md \
+            docs/INSTALLATION_FR.md \
+            docs/TELECHARGEMENTS_FR.md
+          tar -tzf dist/wolfvoice-installation-bloodmoon.4.tar.gz | grep -Fx 'setup.sh'
+          (cd dist && sha256sum wolfvoice-installation-bloodmoon.4.tar.gz > wolfvoice-installation-bloodmoon.4.tar.gz.sha256)
+          (cd dist && sha256sum -c wolfvoice-installation-bloodmoon.4.tar.gz.sha256)
+          cp docs/RELEASE-v0.2.0-bloodmoon.4.md dist/README.md
+          cp docs/SPATIAL_INVESTIGATION.md dist/SPATIAL_FIX.md
+          printf '%s\n' 'Validated server binary unchanged from v0.2.0-bloodmoon.3; original build aa14b9c7bd37f67382b8d59945bda26d86e5975d' > dist/SERVER_PROVENANCE.txt
+          printf '%s\n' 'Complete tested modules: Vlad-BloodMoon/opensim v0.9.3.1-webrtc.3' \
+            'AdHoc source and PHP registry: Vlad-BloodMoon/OpenSimulator-AdHocConferences v0.1.0' \
+            'Server compatibility: BloodMoon modified WolfVoice only' >> dist/SERVER_PROVENANCE.txt
+
+      - name: Publish new immutable release without editing previous assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view v0.2.0-bloodmoon.4 --repo Vlad-BloodMoon/wolfvoice >/dev/null 2>&1; then
+            echo "Release already exists; refusing to overwrite"
+            exit 1
+          fi
+          gh release create v0.2.0-bloodmoon.4 dist/* \
+            --repo Vlad-BloodMoon/wolfvoice \
+            --title 'WolfVoice BloodMoon v0.2.0-bloodmoon.4 - complete voice and AdHoc conferences' \
+            --notes-file docs/RELEASE-v0.2.0-bloodmoon.4.md \
+            --target "${GITHUB_SHA}" \
+            --latest
