@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.2.0-bloodmoon.4 — 2026-11-07: complete BloodMoon group voice and AdHoc conferences
+
+- **Same proven WolfVoice server binary** as `v0.2.0-bloodmoon.2/.3`; spatial-axis correction and baseline x86-64 non-AVX compatibility preserved; no server restart required for users of the existing validated binary.
+- **Matching complete OpenSimulator 0.9.3.1 / .NET 8 module pack**: `v0.9.3.1-webrtc.3`, three DLL/PDB pairs, including the exact regional module validated in Firestorm.
+- **OpenSim group voice calls**, invitations across simulators and independent rejoin.
+- **Ad-hoc multi-avatar instant-message conferences** and optional WebRTC voice, including cross-simulator delivery. Fixed sender self-echo, recursive call invitations and false leave/rejoin notices.
+- **Requires `ConferenceApiUrl` in `[WebRtcVoice]` on every participating simulator** and the separate signed conference API/MySQL registry; the server binary does not itself provide the registry.
+- **BloodMoon-only compatibility statement**: stock upstream WolfVoice has not yet received all of BloodMoon's axis/group/conference enhancements.
+- Updated `setup.sh` to pin this release and point to the correct complete OpenSimulator module package; refreshed English/French guides.
+- Confidential keys, server credentials, and live grid settings are **never bundled**. Hosted BloodMoon conferences are restricted to approved trusted simulators.
+
+[Versioned release guide](docs/RELEASE-v0.2.0-bloodmoon.4.md) · [French setup](docs/INSTALLATION_FR.md) · [Full module download](https://github.com/Vlad-BloodMoon/opensim/releases/tag/v0.9.3.1-webrtc.3).
+
 By Shadow Wolf and Lone Wolf, Wolf Territories Grid and IntelligentWolf Ltd.
 
 ## v0.2.0-bloodmoon.2 - 2026-10-28: spatial listener axes
