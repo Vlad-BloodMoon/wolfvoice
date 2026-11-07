@@ -1,60 +1,44 @@
-# WolfVoice : téléchargements et installation en français
+# WolfVoice BloodMoon — téléchargements vérifiés
 
-**Paquet conseillé : v0.2.0-bloodmoon.3**, avec le même binaire serveur validé que v0.2.0-bloodmoon.2, les axes corrigés et les liens des modules de groupe à jour. Un serveur v0.2.0-bloodmoon.2 déjà fonctionnel n'a pas besoin d'être remplacé ni redémarré.
-Aucune compilation n'est nécessaire pour les fichiers ci-dessous.
+**Version complète recommandée : `v0.2.0-bloodmoon.4` (serveur) + `v0.9.3.1-webrtc.3` (modules OpenSimulator 0.9.3.1 / .NET 8).**
 
-## Vous installez votre propre serveur vocal pour votre grille ?
+**Attention :** ces fonctionnalités ont été testées **sur le serveur WolfVoice modifié de BloodMoon**. Le serveur WolfVoice d'origine n'a pas encore tous nos correctifs des axes et fonctionnalités de groupe/conférence. Les conférences IM à plusieurs avatars nécessitent en plus l'API centrale PHP/MySQL BloodMoon. **Notre API hébergée n'est accessible qu'aux simulateurs autorisés** ; les clés ne sont jamais distribuées publiquement.
 
-Commencez par le **[guide d'installation pas à pas](INSTALLATION_FR.md)**.
-Un seul parcours : serveur Linux, deux clés, port 9443 avec authentification RPC,
-puis DLL et deux fichiers de clés dans le dossier bin de chaque simulateur.
-Il ne nécessite pas de liste d'IP autorisées.
-
-| À télécharger | Usage |
+| Téléchargement | Où l'utiliser |
 | --- | --- |
-| [Serveur WolfVoice Linux x86-64 compilé](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.3/wolfvoice-x86_64-linux-musl) | Sur la machine qui héberge la voix |
-| [Somme de contrôle du serveur](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.3/wolfvoice-x86_64-linux-musl.sha256) | Vérifier le téléchargement |
-| [Modules WebRTC OpenSim 0.9.3.1 : ZIP compilé](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.3/WebRTC_Modules_0.9.3.1-webrtc.2.zip) | Sur chaque simulateur |
-| [Somme de contrôle du ZIP](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.3/WebRTC_Modules_0.9.3.1-webrtc.2.zip.sha256) | Vérifier le ZIP |
-| [Modèle wolfvoice.ini pour une nouvelle grille](../contrib/wolfvoice-fresh-grid.ini.example) | À adapter avec votre nom de serveur |
+| [Serveur WolfVoice BloodMoon, Linux x86-64](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.4/wolfvoice-x86_64-linux-musl) | Serveur vocal |
+| [SHA-256 du binaire serveur](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.4/wolfvoice-x86_64-linux-musl.sha256) | Contrôle avant installation |
+| [**Pack complet WebRTC OpenSim 0.9.3.1 — 3 DLL/PDB**](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.4/WebRTC_Modules_BloodMoon_0.9.3.1-webrtc.3.zip) | **Chaque simulateur** |
+| [SHA-256 du ZIP de modules](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.4/WebRTC_Modules_BloodMoon_0.9.3.1-webrtc.3.zip.sha256) | Contrôle du paquet |
+| [Release source des modules OpenSimulator `.3`](https://github.com/Vlad-BloodMoon/opensim/releases/tag/v0.9.3.1-webrtc.3) | Sources et historique |
+| [API AdHoc et documentation](https://github.com/Vlad-BloodMoon/OpenSimulator-AdHocConferences/releases/tag/v0.1.0) | Service central de conférences ; installation distincte |
+| [Fichier exemple WolfVoice](../contrib/wolfvoice-fresh-grid.ini.example) | Exemple à adapter, sans clé privée |
+| [Installateur serveur `setup.sh`](../setup.sh) | **Nouvelle installation serveur uniquement** |
 
-Le ZIP des modules fournit les trois DLL et leurs PDB :
-WebRtcVoice, WebRtcVoiceRegionModule et WebRtcVoiceServiceModule.
-Il ne contient pas un simulateur complet ni de clé privée.
-Les DLL sont compilées contre OpenSim 0.9.3.1 (.NET 8) ; pour une autre version
-ou une distribution modifiée, vérifier la compatibilité avant remplacement.
+## Le paquet complet des modules
 
-Le serveur WolfVoice est un programme Linux x86-64 ; les DLL se placent dans
-OpenSim. Ce sont deux parties différentes. Aucun composant vocal supplémentaire
-n'est à installer sur l'ordinateur des résidents : utiliser un viewer compatible WebRTC.
+Il inclut les paires `WebRtcVoice.dll/.pdb`, `WebRtcVoiceRegionModule.dll/.pdb` et `WebRtcVoiceServiceModule.dll/.pdb`, plus un modèle `wolfvoice.ini.example`, une notice d'installation, un journal de provenance et des sommes SHA-256. La DLL régionale est **la version exacte validée dans Firestorm** pour les conférences AdHoc sur deux simulateurs.
 
-## Vous raccordez seulement un simulateur à une grille équipée ?
+Pour une nouvelle installation, sauvegarder les fichiers existants et installer **les trois paires** dans `bin/`. Pour une installation déjà parfaitement compatible avec la même base, seule la paire `WebRtcVoiceRegionModule.dll/.pdb` peut être remplacée. Ne pas toucher aux autres DLL OpenSimulator.
 
-Demandez à l'administrateur de cette grille son URL vocale, sa configuration,
-les clés nécessaires et ses conditions d'accès au serveur.
-Vous n'avez pas besoin d'installer votre propre serveur WolfVoice.
-Les clés d'une autre grille ne doivent jamais être réutilisées pour votre serveur.
+**Sur chaque simulateur** autorisé, ajouter dans `[WebRtcVoice]` (sans retirer les anciennes options) :
 
-## Quelle version choisir ?
+```ini
+ConferenceApiUrl = https://bloodmoonpack.com/adhocconf/wolf_api.php
+```
 
-- **v0.2.0-bloodmoon.3 : paquet actuel conseillé**, même serveur que v0.2.0-bloodmoon.2, axes corrigés, orientation
-  normalisée et binaire compatible avec les processeurs x86-64 sans AVX.
-- v0.2.0-bloodmoon.1 : ancienne version, sans le correctif des axes.
-- **Modules v0.9.3.1-webrtc.2** : invitations des groupes OpenSim existants, y compris entre simulateurs, et correction des rappels qui faisaient ressonner les membres déjà en appel. Le correctif des axes reste côté serveur.
-- Mise à jour depuis les modules compatibles précédents : remplacer uniquement `WebRtcVoiceRegionModule.dll` et son `.pdb`, puis redémarrer. Pour une nouvelle installation, installer les trois paires DLL/PDB.
-- Les fichiers GitHub « Source code (zip/tar.gz) » sont les sources, pas les
-  programmes compilés. Utiliser les liens du tableau pour les binaires.
+Le service central BloodMoon vérifie les simulateurs autorisés et utilise des clés existantes partagées. Une installation indépendante doit disposer de sa **propre API**, de son propre serveur WolfVoice compatible et de son propre modèle de confiance.
 
-[Release du serveur](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.3)
-· [Release des modules](https://github.com/Vlad-BloodMoon/opensim/releases/tag/v0.9.3.1-webrtc.2)
-· [Explication du correctif spatial](SPATIAL_INVESTIGATION.md)
+## Fonctionnalités validées
 
-Le code source reste disponible dans les deux dépôts. Le moteur WolfVoice est
-développé par Shadow Wolf, Lone Wolf et les contributeurs du projet.
+Voix locale avec axes corrigés, indicateurs de parole, volume individuel, appels privés IM, appels vocaux des groupes OpenSimulator, conférences écrites **à plusieurs avatars**, voix de conférence facultative, invitations entre simulateurs et raccrochage/reconnexion individuel sans expulser les autres.
 
+## Si ton serveur fonctionne déjà
 
-### Limites connues de l’interface Firestorm
+Le binaire `.4` est **identique** à celui des releases BloodMoon `.2` et `.3`. **Ne redémarre pas et ne remplace pas le serveur** uniquement pour ces nouvelles fonctions : mets à jour les DLL et le fichier INI de **chaque simulateur**. Ne relance pas `setup.sh` sur un serveur existant.
 
-Le message français « Pas de réponse » après un raccrochage normal de groupe provient du texte `nearby` mal traduit dans Firestorm ; il ne signifie pas que les membres doivent tous répondre. Un signalement a été transmis par l’opérateur. Aucun correctif de traduction Firestorm n’est inclus dans les DLL.
-Le bouton Raccrocher de la fenêtre IM peut rester grisé chez certains invités : utiliser le bouton rouge dans la liste des participants, accessible via le casque. La cause de ce second problème n’est pas confirmée.
-Ce ZIP regroupe les DLL/PDB validés inchangés et la documentation actualisée ; aucune recompilation ni clé privée n’est incluse.
+## Installation et documentation
+
+[Guide pas à pas français](INSTALLATION_FR.md) · [Guide anglais](INSTALLATION.md) · [Notes de la release `.4`](RELEASE-v0.2.0-bloodmoon.4.md) · [Détail du correctif spatial](SPATIAL_INVESTIGATION.md).
+
+Merci à **Lone Wolf de WolfGrid** pour les fondations de WolfVoice. Cette édition est une intégration spécifique à BloodMoon.
