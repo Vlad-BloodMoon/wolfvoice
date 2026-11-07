@@ -1,7 +1,7 @@
 name: Publish verified BloodMoon WolfVoice v0.2.0-bloodmoon.4
 
-# One-time release. Intentionally keeps the exact field-tested audio executable
-# and complete OpenSimulator module package from their already verified releases.
+# Refresh existing .4 release without renaming assets or touching the server binary.
+# The updated simulator module ZIP is built by OpenSimulator Actions run 42415228332.
 on:
   push:
     branches: [main]
@@ -36,6 +36,20 @@ jobs:
           cp server/wolfvoice-x86_64-linux-musl dist/
           cp server/wolfvoice-x86_64-linux-musl.sha256 dist/
           (cd dist && sha256sum -c wolfvoice-x86_64-linux-musl.sha256)
+
+      - name: Confirm updated OpenSimulator .3 modules have finished building
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 50); do
+            status="$(gh api repos/Vlad-BloodMoon/opensim/actions/runs/42415228332 --jq .conclusion || true)"
+            if [ "$status" = success ]; then exit 0; fi
+            if [ "$status" = failure ] || [ "$status" = cancelled ]; then
+              echo "OpenSimulator build failed: $status"; exit 1
+            fi
+            sleep 6
+          done
+          echo "OpenSimulator build did not finish"; exit 1
 
       - name: Download and verify complete OpenSimulator modules .3
         shell: bash
@@ -82,17 +96,13 @@ jobs:
             'AdHoc source and PHP registry: Vlad-BloodMoon/OpenSimulator-AdHocConferences v0.1.0' \
             'Server compatibility: BloodMoon modified WolfVoice only' >> dist/SERVER_PROVENANCE.txt
 
-      - name: Publish new immutable release without editing previous assets
+      - name: Refresh same-tag BloodMoon .4 assets and checksums
         shell: bash
         run: |
           set -euo pipefail
-          if gh release view v0.2.0-bloodmoon.4 --repo Vlad-BloodMoon/wolfvoice >/dev/null 2>&1; then
-            echo "Release already exists; refusing to overwrite"
-            exit 1
-          fi
-          gh release create v0.2.0-bloodmoon.4 dist/* \
+          gh release view v0.2.0-bloodmoon.4 --repo Vlad-BloodMoon/wolfvoice >/dev/null
+          gh release upload v0.2.0-bloodmoon.4 dist/* \
+            --repo Vlad-BloodMoon/wolfvoice --clobber
+          gh release edit v0.2.0-bloodmoon.4 \
             --repo Vlad-BloodMoon/wolfvoice \
-            --title 'WolfVoice BloodMoon v0.2.0-bloodmoon.4 - complete voice and AdHoc conferences' \
-            --notes-file docs/RELEASE-v0.2.0-bloodmoon.4.md \
-            --target "${GITHUB_SHA}" \
-            --latest
+            --notes-file docs/RELEASE-v0.2.0-bloodmoon.4.md --latest
