@@ -1,3 +1,5 @@
+> **Archive / historical notes only.** For the latest BloodMoon-modified WolfVoice integration with **OpenSimulator group voice and AdHoc multi-avatar text/voice conferences**, use [WolfVoice `v0.2.0-bloodmoon.4`](https://github.com/Vlad-BloodMoon/wolfvoice/releases/tag/v0.2.0-bloodmoon.4) with [OpenSimulator modules `v0.9.3.1-webrtc.3`](https://github.com/Vlad-BloodMoon/opensim/releases/tag/v0.9.3.1-webrtc.3). This older technical text describes a previous stage or generic upstream integration; do not use its earlier module download links for a new BloodMoon deployment. The BloodMoon API is restricted to approved hosts.
+
 # Configuring OpenSimulator
 
 Three things must be true before a viewer will use wolfvoice. Miss any one and the
