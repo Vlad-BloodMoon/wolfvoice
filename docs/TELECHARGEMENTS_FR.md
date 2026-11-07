@@ -13,7 +13,7 @@
 | [Release source des modules OpenSimulator `.3`](https://github.com/Vlad-BloodMoon/opensim/releases/tag/v0.9.3.1-webrtc.3) | Sources et historique |
 | [API AdHoc et documentation](https://github.com/Vlad-BloodMoon/OpenSimulator-AdHocConferences/releases/tag/v0.1.0) | Service central de conférences ; installation distincte |
 | [Fichier exemple WolfVoice](../contrib/wolfvoice-fresh-grid.ini.example) | Exemple à adapter, sans clé privée |
-| [Installateur serveur `setup.sh`](../setup.sh) | **Nouvelle installation serveur uniquement** |
+| [Installateur complet avec scripts TLS — `.tar.gz`](https://github.com/Vlad-BloodMoon/wolfvoice/releases/download/v0.2.0-bloodmoon.4/wolfvoice-installation-bloodmoon.4.tar.gz) | **Nouvelle installation serveur uniquement** |
 
 ## Le paquet complet des modules
 
