@@ -26,8 +26,10 @@
 set -euo pipefail
 
 REPO="Vlad-BloodMoon/wolfvoice"
-# Pin the grid-validated fork release; do not install upstream binaries.
-RELEASE_TAG="v0.2.0-bloodmoon.3"
+# Pin the BloodMoon-validated server release (binary unchanged since bloodmoon.2).
+# This script installs ONLY the server; OpenSimulator DLLs and conference API
+# are separate, and hosted BloodMoon access requires operator authorization.
+RELEASE_TAG="v0.2.0-bloodmoon.4"
 PREFIX="${PREFIX:-/usr/local/bin}"
 CONFDIR="/etc/wolfvoice"
 TLSDIR="$CONFDIR/tls"
@@ -241,8 +243,13 @@ wolfvoice is installed. Signing keys have NOT been created by this installer.
    Never overwrite an existing key or include a key in a public download.
 
    Matching DLL/PDB package:
-   https://github.com/Vlad-BloodMoon/opensim/releases/tag/v0.9.3.1-webrtc.1
+   https://github.com/Vlad-BloodMoon/opensim/releases/tag/v0.9.3.1-webrtc.3
+   Download the complete BloodMoon WebRTC module ZIP (3 DLL/PDB pairs).
    Configure bin/config/wolfvoice.ini with your voice hostname and key file paths.
+   For BloodMoon-managed ad-hoc conferences only, add in [WebRtcVoice]:
+     ConferenceApiUrl = https://bloodmoonpack.com/adhocconf/wolf_api.php
+   This conference API is restricted to approved BloodMoon simulators.
+   Other independent grids need their OWN conference registry and endpoint.
    Install the SAME key contents privately on the server and region hosts.
    Restart wolfvoice after creating its keys, then restart the updated regions.
 
