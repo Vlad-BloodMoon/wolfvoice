@@ -1,3 +1,12 @@
+> [!IMPORTANT]
+> **PROJECT MOVED / PROJET DÉPLACÉ**
+>
+> **English:** This BloodMoon fork is archived for historical reference. All current development, installation instructions, downloads and future releases are maintained at **[BloodMoon-Voice](https://github.com/Vlad-BloodMoon/BloodMoon-Voice)**. For new installations, use **[BloodMoon Voice v1.0.0](https://github.com/Vlad-BloodMoon/BloodMoon-Voice/releases/tag/v1.0.0)**. Do not follow the legacy installation steps below.
+>
+> **Français :** Cet ancien dépôt BloodMoon est conservé pour l'historique. Le développement, les guides d'installation, les téléchargements et les nouvelles versions sont désormais disponibles sur **[BloodMoon-Voice](https://github.com/Vlad-BloodMoon/BloodMoon-Voice)**. Pour toute nouvelle installation, utilise **[BloodMoon Voice v1.0.0](https://github.com/Vlad-BloodMoon/BloodMoon-Voice/releases/tag/v1.0.0)**. Ne suis plus les anciennes procédures d'installation ci-dessous.
+
+---
+
 # wolfvoice — BloodMoon WebRTC voice
 
 > **IMPORTANT — BloodMoon-only compatibility (7 Nov 2026).** This published build targets **BloodMoon's modified WolfVoice server**, **OpenSimulator 0.9.3.1/.NET 8**, and, for ad-hoc conferences, the separate **BloodMoon PHP/MySQL conference API**. The stock upstream WolfVoice server does **not** yet include all BloodMoon axis/group features. The server executable itself is unchanged from the verified `v0.2.0-bloodmoon.2/.3` build; the new functionality is in the regional modules and conference API. **Do not share the voice credential key with untrusted operators.** [Complete release details](docs/RELEASE-v0.2.0-bloodmoon.4.md) · [French guide](docs/INSTALLATION_FR.md).
